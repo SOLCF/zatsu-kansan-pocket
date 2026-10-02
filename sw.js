@@ -1,6 +1,4 @@
-// 同一オリジンのみ扱う。外部通信はしない。
-// キャッシュ優先で即表示し、裏で更新（stale-while-revalidate）。構成を変えたら CACHE を上げる。
-const CACHE = 'zkp-v1';
+﻿// 蜷御ｸ繧ｪ繝ｪ繧ｸ繝ｳ縺ｮ縺ｿ謇ｱ縺・ょ､夜Κ騾壻ｿ｡縺ｯ縺励↑縺・・// 繧ｭ繝｣繝・す繝･蜆ｪ蜈医〒蜊ｳ陦ｨ遉ｺ縺励∬｣上〒譖ｴ譁ｰ・・tale-while-revalidate・峨よｧ区・繧貞､峨∴縺溘ｉ CACHE 繧剃ｸ翫￡繧九・const CACHE = 'zkp-v2';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/app.js', 'js/dom.js', 'js/calc.js', 'js/format.js', 'js/storage.js',

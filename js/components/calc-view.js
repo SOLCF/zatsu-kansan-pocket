@@ -20,7 +20,7 @@ export function renderCalc(root, item) {
 
   let values = {};
   let last = null;
-  const inputs = {};
+  const ctl = {}; // key -> { read(): number, write(v|null) }  欄の種類（数値・時間）の違いをここで吸収
   const badges = {};
   const notes = h('div', { class: 'notes' });
   const assumpBox = h('div', { class: 'assumptions' });
@@ -33,7 +33,7 @@ export function renderCalc(root, item) {
   }
 
   function onInput(key) {
-    const v = parse(inputs[key].value);
+    const v = ctl[key].read();
     last = key;
     if (!Number.isFinite(v) || v < 0) {
       for (const f of item.fields) if (!f.param || f.key === key) values[f.key] = null;
@@ -46,9 +46,9 @@ export function renderCalc(root, item) {
   function paint(typing) {
     for (const f of item.fields) {
       const v = values[f.key];
-      const el = inputs[f.key];
-      const shown = Number.isFinite(v) ? roundSig(v, 3) : null;
-      if (f.key !== typing && parse(el.value) !== shown) el.value = shown === null ? '' : String(shown);
+      const shown = Number.isFinite(v) ? (f.type === 'time' ? Math.round(v) : roundSig(v, 3)) : null;
+      const cur = ctl[f.key].read();
+      if (f.key !== typing && (Number.isFinite(cur) ? cur : null) !== shown) ctl[f.key].write(shown);
       badges[f.key].hidden = !(Number.isFinite(v) && !f.param && f.key !== last);
     }
     notes.replaceChildren(...(item.describe?.(values, a, sel) ?? []).map((t) => h('p', {}, t)));
@@ -105,17 +105,32 @@ export function renderCalc(root, item) {
     ),
   );
 
+  const numInput = (f, label, inputmode) =>
+    h('input', { type: 'text', inputmode, autocomplete: 'off', readonly: !!f.readonly, 'aria-label': label, oninput: () => onInput(f.key) });
+
   const rows = item.fields.map((f) => {
-    inputs[f.key] = h('input', {
-      type: 'text',
-      inputmode: 'decimal',
-      autocomplete: 'off',
-      readonly: !!f.readonly,
-      'aria-label': f.label,
-      oninput: () => onInput(f.key),
-    });
     badges[f.key] = h('span', { class: 'approx', hidden: true }, '約');
-    return h('label', { class: 'field' }, h('span', { class: 'label' }, f.label), badges[f.key], inputs[f.key], h('span', { class: 'unit' }, f.unit));
+    const label = h('span', { class: 'label' }, f.label);
+    if (f.type === 'time') {
+      // ◯分◯秒の2欄入力。値は秒に直して扱う（90秒と入れても1分30秒と同じ）。
+      const min = numInput(f, `${f.label}（分）`, 'numeric');
+      const sec = numInput(f, `${f.label}（秒）`, 'numeric');
+      ctl[f.key] = {
+        read: () => {
+          const m = min.value.trim() === '' ? 0 : parse(min.value);
+          const s = sec.value.trim() === '' ? 0 : parse(sec.value);
+          return min.value.trim() === '' && sec.value.trim() === '' ? NaN : m * 60 + s;
+        },
+        write: (v) => {
+          min.value = v === null ? '' : String(Math.floor(v / 60));
+          sec.value = v === null ? '' : String(v % 60);
+        },
+      };
+      return h('div', { class: 'field time' }, label, badges[f.key], min, h('span', { class: 'unit' }, '分'), sec, h('span', { class: 'unit' }, '秒'));
+    }
+    const input = numInput(f, f.label, 'decimal');
+    ctl[f.key] = { read: () => parse(input.value), write: (v) => (input.value = v === null ? '' : String(v)) };
+    return h('label', { class: 'field' }, label, badges[f.key], input, h('span', { class: 'unit' }, f.unit));
   });
 
   renderAssumptions();
