@@ -1,7 +1,7 @@
 // 対照表型の共通画面。スマホ縦持ちで読めるよう、1行を1枚のカードで表示する。
 // item = { title, tables: [{ title, columns: [列名...], rows: [[...]], note? }], notes?: [文...] }
 // 先頭の列がカードの見出し。「—」や空の値は省く。検索は全表の行を絞り込む（型番・呼び名・メモのどれでも当たる）。
-import { h } from '../dom.js';
+import { h, fill } from '../dom.js';
 
 const hasValue = (v) => String(v).trim() !== '' && String(v).trim() !== '—';
 
@@ -25,10 +25,10 @@ export function renderTable(root, item) {
         t.note ? h('p', { class: 'small' }, t.note) : null,
       ];
     });
-    body.replaceChildren(...(blocks.length ? blocks : [h('p', { class: 'small' }, '見つかりませんでした')]));
+    fill(body, ...(blocks.length ? blocks : [h('p', { class: 'small' }, '見つかりませんでした')]));
   };
   draw('');
-  root.replaceChildren(
+  fill(root,
     h('h2', {}, item.title),
     h('input', { class: 'search', type: 'search', placeholder: '型番・サイズで検索（例：LR44、単3）', oninput: (e) => draw(e.target.value) }),
     body,

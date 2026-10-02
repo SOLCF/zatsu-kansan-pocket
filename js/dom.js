@@ -9,3 +9,9 @@ export function h(tag, props = {}, ...kids) {
   el.append(...kids.flat().filter((x) => x != null && x !== false));
   return el;
 }
+
+// 子要素の総入れ替え。replaceChildren に null/false を直接渡すと「null」という文字が出るため、
+// 条件付きの子要素（cond ? node : null）は必ずこちらを通す。
+export function fill(el, ...kids) {
+  el.replaceChildren(...kids.flat().filter((x) => x != null && x !== false));
+}

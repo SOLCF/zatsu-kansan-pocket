@@ -1,6 +1,6 @@
 // 計算型の共通画面。どの欄に入力しても他の欄が更新され、結果の下に前提値を出す。
 // 前提値のタップ編集は「この画面を開いている間だけ」有効（保存しない）。
-import { h } from '../dom.js';
+import { h, fill } from '../dom.js';
 import { defaultAssumptions } from '../calc.js';
 import { roundSig, fmtNum } from '../format.js';
 import { getMyValues } from '../storage.js';
@@ -51,7 +51,7 @@ export function renderCalc(root, item) {
       if (f.key !== typing && (Number.isFinite(cur) ? cur : null) !== shown) ctl[f.key].write(shown);
       badges[f.key].hidden = !(Number.isFinite(v) && !f.param && f.key !== last);
     }
-    notes.replaceChildren(...(item.describe?.(values, a, sel) ?? []).map((t) => h('p', {}, t)));
+    fill(notes, ...(item.describe?.(values, a, sel) ?? []).map((t) => h('p', {}, t)));
   }
 
   function chip(s) {
@@ -82,7 +82,7 @@ export function renderCalc(root, item) {
   }
 
   function renderAssumptions() {
-    assumpBox.replaceChildren(h('div', { class: 'assump-title' }, '前提値（タップでこの画面だけ変更）'), ...item.assumptions.map(chip));
+    fill(assumpBox, h('div', { class: 'assump-title' }, '前提値（タップでこの画面だけ変更）'), ...item.assumptions.map(chip));
   }
 
   const selectEls = (item.selects ?? []).map((s) =>
@@ -134,5 +134,5 @@ export function renderCalc(root, item) {
   });
 
   renderAssumptions();
-  root.replaceChildren(h('h2', {}, item.title), ...selectEls, h('div', { class: 'fields' }, rows), notes, item.note ? h('p', { class: 'small' }, item.note) : null, assumpBox);
+  fill(root, h('h2', {}, item.title), ...selectEls, h('div', { class: 'fields' }, rows), notes, item.note ? h('p', { class: 'small' }, item.note) : null, assumpBox);
 }
