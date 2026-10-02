@@ -1,6 +1,6 @@
 // 同一オリジンのみ扱う。外部通信はしない。
 // キャッシュ優先で即表示し、裏で更新（stale-while-revalidate）。構成を変えたら CACHE を上げる。
-const CACHE = 'zkp-v19';
+const CACHE = 'zkp-v20';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/app.js', 'js/dom.js', 'js/calc.js', 'js/format.js', 'js/storage.js', 'js/theme.js', 'js/dates.js',

@@ -23,15 +23,15 @@ h2 { margin: 8px 0 12px; font-size: 1.25rem; }
 h3 { margin: 18px 0 6px; font-size: .9rem; color: var(--sub); }
 .search, select, input[type=text], input[type=date] { font: inherit; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 48px; width: 100%; }
 .card { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; color: inherit; text-decoration: none; min-height: 56px; justify-content: center; }
-/* ホームのジャンル（折り畳み）。見出しをタップで開閉、右端に項目数と矢印 */
+/* ホームのジャンル（折り畳み）。見出しをタップで開閉、右端に項目数と矢印。見出しは濃い緑・白文字で、白いカードの項目と見分けやすくする */
 .group-tools { display: flex; justify-content: flex-end; gap: 6px; margin: 8px 0 4px; }
 .group-tools .chip { margin: 0; min-height: 36px; }
 .genre { margin-bottom: 8px; }
-.genre > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 8px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; font-weight: 700; cursor: pointer; user-select: none; }
+.genre > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 8px 14px; background: var(--head); color: #fff; border: 1px solid var(--head); border-radius: 12px; font-weight: 700; cursor: pointer; user-select: none; }
 .genre > summary::-webkit-details-marker { display: none; }
-.genre > summary::after { content: '›'; font-size: 1.4rem; line-height: 1; color: var(--sub); transition: transform .15s; }
+.genre > summary::after { content: '›'; font-size: 1.4rem; line-height: 1; color: #fff; transition: transform .15s; }
 .genre[open] > summary::after { transform: rotate(90deg); }
-.genre > summary .count { margin-left: auto; color: var(--sub); font-weight: 400; font-size: .85rem; }
+.genre > summary .count { margin-left: auto; color: rgba(255, 255, 255, .8); font-weight: 400; font-size: .85rem; }
 .genre .group-body { padding-top: 8px; }
 .card-row { display: flex; align-items: stretch; gap: 8px; margin-bottom: 8px; }
 .card-row .card { flex: 1; margin-bottom: 0; min-width: 0; }

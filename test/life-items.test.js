@@ -144,7 +144,9 @@ test('西暦⇄和暦: 西暦 → 和暦、和暦 → 西暦（選んだ元号�
 
 test('西暦⇄和暦: 説明（改元の年・干支・今年の年齢・明治より前）', () => {
   assert.deepEqual(describeWareki(2026, 2026).slice(0, 2), ['2026年 ＝ 令和8年', '干支：丙午']);
-  assert.match(describeWareki(2026, 2026)[2], /0歳になる年/);
+  assert.equal(describeWareki(2026, 2026)[2], '2026年は今年です（今年生まれなら0歳）'); // 「誕生日の前は-1歳」のような文は出さない
+  assert.doesNotMatch(describeWareki(2026, 2026).join(''), /-1歳/);
+  assert.match(describeWareki(2025, 2026)[2], /1歳になる年（誕生日の前は0歳）/);
   assert.equal(describeWareki(1989, 2026)[0], '1989年 ＝ 昭和64年・平成元年');
   assert.match(describeWareki(1990, 2026).join('\n'), /2026年に 36歳になる年（誕生日の前は35歳）/);
   assert.match(describeWareki(1700, 2026)[0], /明治より前/);

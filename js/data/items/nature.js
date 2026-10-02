@@ -292,32 +292,50 @@ export const cloudbase = {
   genre: '天気・自然',
   title: '雲底高度と湿度',
   kind: 'calc',
-  hint: '雲の底の高さ ⇄ 地上の湿度（ざっくり）',
+  hint: '雲の底の高さ・気温と露点 ⇄ 地上の湿度（ざっくり）',
   anchorMain: true,
   fields: [
     { key: 'base', label: '雲底高度（地上からの高さ）', unit: 'm' },
-    { key: 'temp', label: '地上の気温（任意）', unit: '℃', param: true, optional: true, signed: true, blankValue: null },
+    { key: 'temp', label: '地上の気温（露点から求めるときは必須）', unit: '℃', param: true, optional: true, signed: true, blankValue: null },
+    { key: 'dew', label: '露点温度', unit: '℃', signed: true },
     { key: 'rh', label: '地上の湿度', unit: '%' },
-    { key: 'dew', label: '露点温度（気温を入れたとき）', unit: '℃', readonly: true },
   ],
-  assumptions: [{ key: 'tDefault', label: '気温（未入力のとき）', unit: '℃', value: 20 }],
+  assumptions: [{ key: 'tDefault', label: '気温（雲底高度・湿度だけのとき）', unit: '℃', value: 20 }],
   compute: (key, value, values, a) => {
     const out = { ...values, [key]: value };
-    const t = isNum(out.temp) ? out.temp : a.tDefault;
+    // 「どれを入れて求めたか」（src）を覚えておく。あとから気温を変えたときに、入れた値を保って他を出し直すため。
+    if (['base', 'rh', 'dew'].includes(key)) out.src = key;
+    const src = out.src ?? 'base';
+    const hasT = isNum(out.temp);
+    const t = hasT ? out.temp : a.tDefault;
     const baseOk = (b) => isNum(b) && b >= 0 && b <= MAX_CLOUD_BASE_M;
     const rhOk = (r) => isNum(r) && r > 0 && r <= 100;
-    if (key === 'rh') out.base = rhOk(value) ? cloudBaseFromRh(value, t) : null;
-    else if (key === 'base') out.rh = baseOk(value) ? rhFromCloudBase(value, t) : null;
-    else if (baseOk(out.base)) out.rh = rhFromCloudBase(out.base, t); // 気温を変えたら、雲底高度を保って湿度を出し直す
-    else if (rhOk(out.rh)) out.base = cloudBaseFromRh(out.rh, t);
-    out.dew = isNum(out.temp) && baseOk(out.base) ? out.temp - out.base / CLOUD_M_PER_DEG : null;
+    if (src === 'dew') {
+      // 気温と露点から湿度（と雲底高度）。露点は気温との差で意味を持つので、気温が空欄のときは求めない
+      const base = hasT && isNum(out.dew) ? CLOUD_M_PER_DEG * (out.temp - out.dew) : null;
+      const ok = baseOk(base);
+      out.base = ok ? base : null;
+      out.rh = ok ? rhFromDew(out.temp, out.dew) : null;
+    } else if (src === 'rh') {
+      out.base = rhOk(out.rh) ? cloudBaseFromRh(out.rh, t) : null;
+    } else {
+      out.rh = baseOk(out.base) ? rhFromCloudBase(out.base, t) : null;
+    }
+    if (src !== 'dew') out.dew = hasT && baseOk(out.base) ? out.temp - out.base / CLOUD_M_PER_DEG : null; // 露点は気温があるときに求まる
     return out;
   },
   describe: (v, a) => {
+    if (v.src === 'dew' && isNum(v.dew)) {
+      if (!isNum(v.temp)) return ['露点温度から湿度を求めるには、地上の気温も入れてください'];
+      if (v.dew > v.temp) return ['露点温度は気温以下で入れてください（露点が気温より高いことはありません）'];
+    }
     if (isNum(v.base) && v.base > MAX_CLOUD_BASE_M) return [`雲底高度は ${MAX_CLOUD_BASE_M}m までで入れてください（積雲の底の高さの目安です）`];
-    if (!isNum(v.base) || !isNum(v.rh)) return [];
+    if (!isNum(v.base) || !isNum(v.rh)) {
+      return v.src === 'dew' && isNum(v.dew) && isNum(v.temp) ? ['気温と露点の差が大きすぎます（雲底高度が6000mを超える）。入力を見直してください'] : [];
+    }
     const lines = [`気温と露点の差（湿数）は 約${fmtNum(v.base / CLOUD_M_PER_DEG, 2)}℃（雲底高度 ÷ 125m）`];
-    if (!isNum(v.temp)) lines.push(`気温は ${a.tDefault}℃として計算しています（気温が違っても湿度は±数%ほど）`);
+    if (v.src === 'dew') lines.push(`気温 ${fmtNum(v.temp, 3)}℃・露点 ${fmtNum(v.dew, 3)}℃ → 湿度 約${fmtNum(v.rh, 3)}%`);
+    else if (!isNum(v.temp)) lines.push(`気温は ${a.tDefault}℃として計算しています（気温が違っても湿度は±数%ほど）`);
     lines.push('積雲（もくもくした雲）の底の高さの目安です。層状の雲や、上空の高い雲には使えません');
     return lines;
   },

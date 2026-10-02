@@ -1,31 +1,14 @@
 // カメラの換算項目（露出・星の流れ）。根拠は各コメントを参照（2026-10 時点でWeb確認）。
-import { isNum } from '../../calc.js';
+import { isNum, fractionParts } from '../../calc.js';
 import { approx, fmtNum } from '../../format.js';
 
-// ---- シャッタースピードの入力・表示 ----
-// 「1/250」「1／250」「250分の1」「0.5」「30」「30秒」を読む。分数でなければ秒。読めなければ NaN。
-export function parseShutter(s) {
-  let t = String(s)
-    .trim()
-    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
-    .replace(/[／．”″＂]/g, (c) => ({ '／': '/', '．': '.' })[c] ?? '"')
-    .replace(/\s/g, '');
-  t = t.replace(/(秒|sec|s|")$/i, '');
-  const num = '(\\d+(?:\\.\\d+)?)';
-  let v = NaN;
-  let m;
-  if ((m = new RegExp(`^${num}/${num}$`).exec(t))) v = Number(m[1]) / Number(m[2]);
-  else if ((m = new RegExp(`^${num}分の${num}$`).exec(t))) v = Number(m[2]) / Number(m[1]);
-  else if (new RegExp(`^${num}$`).test(t)) v = Number(t);
-  return Number.isFinite(v) && v > 0 ? v : NaN;
-}
-
-// 秒 → 入力欄の文字（1/250、0.5、30）。「秒」は付けない
+// ---- シャッタースピードの表示 ----
+// 入力欄は「分子 ／ 分母」の2欄（calc-view の type: 'fraction'）。値は秒（1 ／ 125 → 0.008、30 ／ 1 → 30）。
+// 説明文に出す表記（1/250秒、30秒）。1/2、1/3のような分数にできる値は分数、それ以外は小数の秒。
 export function shutterText(sec) {
-  if (!Number.isFinite(sec) || sec <= 0) return '';
-  if (sec >= 0.3) return String(Number(sec.toFixed(2)));
-  const n = 1 / sec;
-  return Math.abs(n - Math.round(n)) / n < 0.03 ? `1/${Math.round(n)}` : String(Number(sec.toPrecision(2)));
+  const p = fractionParts(sec);
+  if (!p) return '';
+  return p.den === '1' ? p.num : `${p.num}/${p.den}`;
 }
 export const shutterLabel = (sec) => `${shutterText(sec)}秒`;
 
@@ -81,7 +64,7 @@ export const exposure = {
     },
   ],
   fields: [
-    { key: 'shutter', label: 'シャッタースピード', unit: '秒', param: true, parse: parseShutter, format: shutterText, inputmode: 'text', placeholder: '1/250 や 0.5 や 30', default: 0.008 },
+    { key: 'shutter', label: 'シャッタースピード（分子 ／ 分母）', unit: '秒', type: 'fraction', param: true, default: 0.008 },
     { key: 'aperture', label: '絞り（F値）', unit: 'F', param: true, default: 4 },
     { key: 'iso', label: 'ISO感度', unit: 'ISO', param: true, default: 100 },
     { key: 'ev', label: '明るさスコア（EV）', unit: 'EV', readonly: true },
@@ -177,7 +160,7 @@ export const startrail = {
     },
   ],
   fields: [
-    { key: 'shutter', label: 'シャッタースピード', unit: '秒', param: true, parse: parseShutter, format: shutterText, inputmode: 'text', placeholder: '20 や 1/10', default: 20 },
+    { key: 'shutter', label: 'シャッタースピード（分子 ／ 分母）', unit: '秒', type: 'fraction', param: true, default: 20 },
     { key: 'focal', label: '焦点距離（レンズの表記）', unit: 'mm', param: true, default: 24 },
     { key: 'trailMm', label: 'センサー上の流れ', unit: 'mm', readonly: true },
     { key: 'trailPx', label: '画素に直すと', unit: '画素', readonly: true },

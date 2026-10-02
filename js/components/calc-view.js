@@ -2,7 +2,7 @@
 // 前提値のタップ編集は「この画面を開いている間だけ」有効（保存しない）。
 import { h, fill } from '../dom.js';
 import { titleBar } from './fav.js';
-import { defaultAssumptions, parseNumber as parse, shouldWrite } from '../calc.js';
+import { defaultAssumptions, parseNumber as parse, shouldWrite, fractionParts } from '../calc.js';
 import { roundSig, fmtNum } from '../format.js';
 import { getMyValues } from '../storage.js';
 import { cardsFor } from './table-view.js';
@@ -123,7 +123,7 @@ export function renderCalc(root, item) {
   );
 
   const numInput = (f, label, inputmode) =>
-    h('input', { type: 'text', inputmode, autocomplete: 'off', readonly: !!f.readonly, placeholder: f.placeholder, 'aria-label': label, oninput: () => onInput(f.key) });
+    h('input', { type: 'text', inputmode, autocomplete: 'off', readonly: !!f.readonly, 'aria-label': label, oninput: () => onInput(f.key) });
 
   const rows = item.fields.map((f) => {
     badges[f.key] = h('span', { class: 'approx', hidden: true }, '約');
@@ -145,16 +145,31 @@ export function renderCalc(root, item) {
       };
       return h('div', { class: 'field time' }, label, badges[f.key], min, h('span', { class: 'unit' }, '分'), sec, h('span', { class: 'unit' }, '秒'));
     }
+    if (f.type === 'fraction') {
+      // 分数の2欄入力（分子 ／ 分母）。値は 分子÷分母（1 ／ 125 なら 1/125）。分母が空欄なら1（30秒なら分子に30だけ）。
+      const num = numInput(f, `${f.label} 分子`, 'decimal');
+      const den = numInput(f, `${f.label} 分母`, 'decimal');
+      ctl[f.key] = {
+        read: () => {
+          const v = parse(num.value) / (den.value.trim() === '' ? 1 : parse(den.value));
+          return Number.isFinite(v) && v > 0 ? v : NaN;
+        },
+        write: (v) => {
+          const p = v === null ? null : fractionParts(v);
+          num.value = p ? p.num : '';
+          den.value = p ? p.den : '';
+        },
+      };
+      return h('div', { class: 'field time' }, label, badges[f.key], num, h('span', { class: 'unit' }, '／'), den, h('span', { class: 'unit' }, f.unit));
+    }
     if (f.type === 'date') {
       // 日付欄（カレンダーで選ぶ）。値は「1970-01-01 からの日数」で扱う。
       const input = h('input', { type: 'date', 'aria-label': f.label, oninput: () => onInput(f.key) });
       ctl[f.key] = { read: () => parseIso(input.value), write: (v) => (input.value = v === null ? '' : toIso(v)) };
       return h('label', { class: 'field' }, label, badges[f.key], input, h('span', { class: 'unit' }, f.unit));
     }
-    // 欄ごとに読み取り（f.parse）・表示（f.format）・キーボード（f.inputmode）を変えられる。例：シャッタースピードの「1/250」
-    const input = numInput(f, f.label, f.inputmode ?? 'decimal');
-    const read = f.parse ?? parse;
-    ctl[f.key] = { read: () => read(input.value), write: (v) => (input.value = v === null ? '' : f.format ? f.format(v) : String(v)) };
+    const input = numInput(f, f.label, 'decimal');
+    ctl[f.key] = { read: () => parse(input.value), write: (v) => (input.value = v === null ? '' : String(v)) };
     return h('label', { class: 'field' }, label, badges[f.key], input, h('span', { class: 'unit' }, f.unit));
   });
 

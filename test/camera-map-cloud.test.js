@@ -1,42 +1,56 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseShutter, shutterText, shutterLabel, evOf, settingsFor, SCENES, exposure,
+  shutterText, shutterLabel, evOf, settingsFor, SCENES, exposure,
   startrail, starTrail, cropFactor, trailVerdict, SENSORS, ARCSEC_PER_S, EARTH_RATE, SIDEREAL_DAY_S,
 } from '../js/data/items/camera.js';
 import { latlon, kmPerDegLon, walk } from '../js/data/items/transport.js';
 import { cloudbase, rhFromDew, dewFromRh, rhFromCloudBase, cloudBaseFromRh, MAX_CLOUD_BASE_M } from '../js/data/items/nature.js';
+import { fractionParts } from '../js/calc.js';
 import { ITEMS } from '../js/data/index.js';
 import { MY_VALUE_DEFS } from '../js/data/myvalues.js';
 import { getGroupOpen, setGroupOpen, setAllGroupsOpen } from '../js/storage.js';
 
 const near = (actual, expected, eps = 1e-9) => assert.ok(Math.abs(actual - expected) < eps, `${actual} ≒ ${expected}`);
 
-// ---- シャッタースピードの入力・表示 ----
-test('シャッター入力: 分数・分の1・秒・全角・単位つきを読める', () => {
-  const t = 1 / 250;
-  for (const s of ['1/250', '1／250', '１/２５０', '250分の1', ' 1 / 250 ', '1/250秒']) near(parseShutter(s), t, 1e-12);
-  near(parseShutter('0.5'), 0.5);
-  near(parseShutter('30'), 30);
-  near(parseShutter('30秒'), 30);
-  near(parseShutter('30"'), 30);
-  near(parseShutter('1/0.5'), 2);
+// ---- シャッタースピード（分子 ／ 分母の2欄）----
+test('分数欄: 秒 → 分子・分母の文字（1/125、30秒は 30 ／ 1）', () => {
+  assert.deepEqual(fractionParts(0.008), { num: '1', den: '125' });
+  assert.deepEqual(fractionParts(1 / 250), { num: '1', den: '250' });
+  assert.deepEqual(fractionParts(1 / 60), { num: '1', den: '60' });
+  assert.deepEqual(fractionParts(0.5), { num: '1', den: '2' });
+  assert.deepEqual(fractionParts(30), { num: '30', den: '1' });
+  assert.deepEqual(fractionParts(2.5), { num: '2.5', den: '1' });
+  assert.deepEqual(fractionParts(0.4), { num: '0.4', den: '1' }); // 分数にしにくい値は小数
+  for (const bad of [0, -1, NaN, Infinity, undefined]) assert.equal(fractionParts(bad), null, String(bad));
 });
 
-test('シャッター入力: 読めない・0以下は NaN', () => {
-  for (const s of ['', '  ', 'abc', '0', '-1', '1/0', '1/', '/250', '1//250', '1.2.3', 'Infinity']) assert.ok(Number.isNaN(parseShutter(s)), `「${s}」`);
+test('分数欄: 戻すと元の秒になる（分子÷分母）', () => {
+  for (const sec of [0.008, 1 / 250, 1 / 60, 0.5, 30, 2.5, 1 / 8000]) {
+    const p = fractionParts(sec);
+    near(Number(p.num) / Number(p.den), sec, sec * 0.03); // 1/N に丸めるので3%以内
+  }
 });
 
-test('シャッター表示: 1/N・秒の表記に直す', () => {
+test('シャッター表示: 説明文の表記（1/250秒・30秒）', () => {
   assert.equal(shutterText(0.008), '1/125');
-  assert.equal(shutterText(1 / 250), '1/250');
-  assert.equal(shutterText(1 / 60), '1/60');
   assert.equal(shutterText(30), '30');
-  assert.equal(shutterText(0.5), '0.5');
-  assert.equal(shutterText(2), '2');
+  assert.equal(shutterText(0.5), '1/2');
   assert.equal(shutterText(NaN), '');
   assert.equal(shutterLabel(0.004), '1/250秒');
-  near(parseShutter(shutterText(0.004)), 0.004, 1e-12); // 表示 → 入力で元に戻る
+  assert.equal(shutterLabel(20), '20秒');
+});
+
+test('シャッター欄は分数の2欄（type: fraction）で、露出・星の流れとも初期値を持つ', () => {
+  for (const item of [exposure, startrail]) {
+    const f = item.fields.find((x) => x.key === 'shutter');
+    assert.equal(f.type, 'fraction', item.id);
+    assert.equal(f.param, true);
+    assert.equal(f.unit, '秒');
+    assert.equal(f.parse, undefined); // 文字の解析ではなく2欄で入力する
+  }
+  assert.equal(exposure.fields.find((x) => x.key === 'shutter').default, 0.008);
+  assert.equal(startrail.fields.find((x) => x.key === 'shutter').default, 20);
 });
 
 // ---- 露出 ----
@@ -365,4 +379,87 @@ test('開いた時点で結果を出す項目（露出・星の流れ）は、�
   assert.ok(Number.isFinite(ex.ev) && Number.isFinite(ex.diff));
   const st = startrail.compute('focal', 24, { shutter: 20, focal: 24 }, { sw: 36, sh: 24, mp: 24, cosDec: 1 });
   assert.ok(Number.isFinite(st.trailPx));
+});
+
+// ---- 雲底高度と湿度: 気温と露点から湿度 ----
+test('雲底: 気温25℃・露点17℃ → 湿度約61%、雲底1000m（入力した露点は保つ）', () => {
+  const a = { tDefault: 20 };
+  let v = cloudbase.compute('temp', 25, {}, a);
+  v = cloudbase.compute('dew', 17, v, a);
+  near(v.base, 1000, 1e-9); // 125 × (25 − 17)
+  near(v.rh, rhFromDew(25, 17), 1e-9);
+  near(v.rh, 61.2, 0.1);
+  assert.equal(v.dew, 17); // 入れた露点はそのまま
+});
+
+test('雲底: 気温を変えても、入れた露点・湿度・雲底高度を保って他を出し直す', () => {
+  const a = { tDefault: 20 };
+  let v = cloudbase.compute('temp', 25, {}, a);
+  v = cloudbase.compute('dew', 17, v, a);
+  const hot = cloudbase.compute('temp', 30, v, a); // 露点を保つ → 気温差が広がり、湿度は下がる
+  assert.equal(hot.dew, 17);
+  near(hot.base, 125 * 13, 1e-9);
+  near(hot.rh, rhFromDew(30, 17), 1e-9);
+  assert.ok(hot.rh < v.rh);
+  // 湿度を入れた場合は湿度を保つ
+  let r = cloudbase.compute('rh', 60, { temp: 20 }, a);
+  const r30 = cloudbase.compute('temp', 30, r, a);
+  assert.equal(r30.rh, 60);
+  assert.ok(r30.base > r.base); // 暑いほど、同じ湿度でも露点との差が大きく雲底は高い
+  // 雲底高度を入れた場合は雲底高度を保つ
+  let b = cloudbase.compute('base', 1000, { temp: 20 }, a);
+  const b30 = cloudbase.compute('temp', 30, b, a);
+  assert.equal(b30.base, 1000);
+  near(b30.dew, 30 - 8, 1e-9);
+});
+
+test('雲底: 露点は気温が空欄だと求めず、気温より高いときも求めない（案内を出す）', () => {
+  const a = { tDefault: 20 };
+  const noT = cloudbase.compute('dew', 12, {}, a);
+  assert.equal(noT.rh, null);
+  assert.equal(noT.base, null);
+  assert.match(cloudbase.describe(noT, a)[0], /地上の気温も入れてください/);
+  const over = cloudbase.compute('dew', 26, { temp: 25 }, a);
+  assert.equal(over.rh, null);
+  assert.match(cloudbase.describe(over, a)[0], /露点温度は気温以下/);
+  const far = cloudbase.compute('dew', -30, { temp: 25 }, a); // 差55℃ → 雲底6875m
+  assert.equal(far.rh, null);
+  assert.match(cloudbase.describe(far, a)[0], /大きすぎます/);
+  near(cloudbase.compute('dew', 100, { temp: 100 }, a).rh, 100, 1e-6); // 差0 → 湿度100%
+});
+
+test('雲底: 氷点下の露点も扱え、気温を空欄に戻すと露点から求めた結果は消える', () => {
+  const a = { tDefault: 20 };
+  const v = cloudbase.compute('dew', -3, { temp: 5 }, a);
+  near(v.base, 1000, 1e-9);
+  assert.ok(v.rh > 50 && v.rh < 70);
+  const cleared = cloudbase.compute('temp', null, v, a);
+  assert.equal(cleared.rh, null);
+  assert.match(cloudbase.describe(cleared, a)[0], /気温も入れてください/);
+});
+
+test('雲底: 説明（気温と露点から湿度）。欄は 雲底・気温・露点・湿度 の順で、露点は入力できる', () => {
+  const a = { tDefault: 20 };
+  const v = cloudbase.compute('dew', 17, cloudbase.compute('temp', 25, {}, a), a);
+  const text = cloudbase.describe(v, a).join('\n');
+  assert.match(text, /湿数）は 約8℃/);
+  assert.match(text, /気温 25℃・露点 17℃ → 湿度 約61\.2%/);
+  assert.doesNotMatch(text, /として計算しています/); // 気温を使っているので仮定の案内は出さない
+  assert.deepEqual(cloudbase.fields.map((f) => f.key), ['base', 'temp', 'dew', 'rh']);
+  const dew = cloudbase.fields.find((f) => f.key === 'dew');
+  assert.ok(!dew.readonly && dew.signed);
+});
+
+// ---- 西暦⇄和暦の初期値は今年 ----
+import { wareki } from '../js/data/items/date.js';
+
+test('西暦⇄和暦: 初期値は今年（端末の年）で、開いた時点で和暦まで出す', () => {
+  const f = wareki.fields.find((x) => x.key === 'seireki');
+  assert.equal(typeof f.default, 'function');
+  assert.equal(f.default(), new Date().getFullYear());
+  assert.equal(wareki.computeOnLoad, true);
+  const year = f.default();
+  const v = wareki.compute('seireki', year, {}, { eraName: '令和' });
+  assert.equal(v.wareki, year - 2018); // 令和元年 = 2019
+  assert.match(wareki.describe(v, { eraName: '令和' })[0], new RegExp(`${year}年 ＝ 令和${year - 2018}年`));
 });

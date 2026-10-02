@@ -38,6 +38,16 @@ export function parseNumber(s) {
   return /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(t) ? Number(t) : NaN;
 }
 
+// 小数 → 分数入力欄の「分子」「分母」の文字（シャッタースピード 0.008 → 1 / 125、30 → 30 / 1）。
+// 1分の1に近い値（誤差3%以内）は 1/N に、それ以外は分母1の小数にする。0以下・数でないものは null。
+export function fractionParts(v) {
+  if (!Number.isFinite(v) || v <= 0) return null;
+  if (v >= 1) return { num: String(Number(v.toFixed(2))), den: '1' };
+  const n = 1 / v;
+  if (Math.abs(n - Math.round(n)) / n < 0.03) return { num: '1', den: String(Math.round(n)) };
+  return { num: String(Number(v.toPrecision(2))), den: '1' };
+}
+
 // 計算結果を欄に書き戻すか。欄の文字が「厳密な値」または「表示用に丸めた値」と同じなら、そのまま残す。
 // （ユーザーが入れた 1234 を、別の欄を触ったときに 1230 へ丸めてしまわないため）
 export function shouldWrite(cur, exact, shown) {

@@ -26,9 +26,8 @@ export function describeWareki(seireki, thisYear) {
   ];
   if (Number.isInteger(seireki)) lines.push(`干支：${eto(seireki)}`);
   const diff = thisYear - seireki;
-  if (Number.isInteger(diff) && diff >= 0 && diff <= 130) {
-    lines.push(`${thisYear}年に ${diff}歳になる年（誕生日の前は${diff - 1}歳）`);
-  }
+  if (diff === 0) lines.push(`${thisYear}年は今年です（今年生まれなら0歳）`);
+  else if (Number.isInteger(diff) && diff > 0 && diff <= 130) lines.push(`${thisYear}年に ${diff}歳になる年（誕生日の前は${diff - 1}歳）`);
   return lines;
 }
 
@@ -38,6 +37,7 @@ export const wareki = {
   title: '西暦⇄和暦',
   kind: 'calc',
   hint: '西暦 ⇄ 和暦、干支、今年の年齢',
+  computeOnLoad: true,
   selects: [
     {
       key: 'era',
@@ -47,7 +47,8 @@ export const wareki = {
     },
   ],
   fields: [
-    { key: 'seireki', label: '西暦', unit: '年', integer: true, exact: true },
+    // 最初は今年（端末の日付）。開いた時点で和暦・干支まで出る
+    { key: 'seireki', label: '西暦', unit: '年', integer: true, exact: true, default: () => new Date().getFullYear() },
     { key: 'wareki', label: '和暦の年', unit: '年', integer: true, exact: true },
   ],
   assumptions: [],
