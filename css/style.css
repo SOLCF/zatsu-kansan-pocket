@@ -27,12 +27,14 @@ h3 { margin: 18px 0 6px; font-size: .9rem; color: var(--sub); }
 .field:has(.approx:not([hidden])) input { padding-left: 36px; background: var(--hit); }
 .field input { grid-row: 2; grid-column: 1; font-size: 1.3rem; text-align: right; }
 .field .unit { grid-row: 2; grid-column: 2; min-width: 2.5em; }
-.field.time { grid-template-columns: 1.4em 1fr auto 1fr auto; }
-.field.time .approx, .field.time .unit, .field.time input { grid-row: 2; grid-column: auto; margin: 0; }
-.field.time .approx { display: inline; visibility: hidden; color: var(--accent); font-weight: 700; }
-.field.time:has(.approx:not([hidden])) .approx { visibility: visible; }
-.field.time:has(.approx:not([hidden])) input { padding-left: 12px; }
+/* 時間欄は「分」「秒」の2欄。枠は他の欄と同じ左端に揃え、「約」は最初の枠の中に重ねる */
+.field.time { grid-template-columns: 1fr auto 1fr auto; }
+.field.time .unit, .field.time input { grid-row: 2; grid-column: auto; }
+.field.time input:nth-of-type(1) { grid-column: 1; }
+.field.time .approx { grid-column: 1; }
 .field.time .unit { min-width: 0; }
+.field.time:has(.approx:not([hidden])) input { padding-left: 12px; }
+.field.time:has(.approx:not([hidden])) input:nth-of-type(1) { padding-left: 36px; }
 .notes { color: var(--accent); font-weight: 600; }
 .notes p { margin: 8px 0 0; }
 .assumptions { margin-top: 20px; font-size: .85rem; color: var(--sub); }
