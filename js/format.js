@@ -35,6 +35,11 @@ export function approxYenRange(lo, hi, sig = 2) {
   return `約${fmtNum(lo, sig)}〜${fmtNum(hi, sig)}円`;
 }
 
+// ドル。「約$0.08」
+export function approxUsd(x, sig = 3) {
+  return `約$${fmtNum(x, sig)}`;
+}
+
 // 分 → 「約1時間12分」「約45分」
 export function approxHourMin(min) {
   const m = Math.round(min);

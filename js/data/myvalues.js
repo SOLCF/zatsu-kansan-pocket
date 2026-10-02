@@ -2,6 +2,7 @@
 // 項目を追加するたびに、関係するものを追記する。options があるものは設定画面で選択式になる（値は数値）。
 import { TATAMI_SIZES } from './items/housing.js';
 import { MATERIALS, FILAMENT_DIAMETERS } from './items/hobby.js';
+import { MODELS, DEFAULT_MODEL_N } from './items/claude.js';
 
 export const MY_VALUE_DEFS = [
   { key: 'chawanG', label: '茶碗1杯の量（ご飯）', unit: 'g', value: 150, usedBy: '米' },
@@ -15,5 +16,7 @@ export const MY_VALUE_DEFS = [
   { key: 'walkSpeed', label: '歩行速度', unit: 'm/分', value: 80, usedBy: '徒歩' },
   { key: 'filamentDia', label: 'フィラメントの径', unit: 'mm', value: 1.75, usedBy: 'フィラメント', options: FILAMENT_DIAMETERS },
   { key: 'filamentDensity', label: 'フィラメントの素材', unit: '', value: 1.24, usedBy: 'フィラメント', options: MATERIALS },
+  { key: 'claudeModel', label: 'よく使う Claude のモデル', unit: '', value: DEFAULT_MODEL_N, usedBy: 'Claude の4項目', options: MODELS.map((m) => ({ value: m.n, label: m.label })) },
+  { key: 'usdJpy', label: '為替レート（1ドル）', unit: '円', value: 158, usedBy: 'Claude の料金（2026-10-01 は約158円）' },
   { key: 'tatamiArea', label: '畳の規格', unit: '㎡/枚', value: 1.824, usedBy: '部屋面積', options: TATAMI_SIZES },
 ];

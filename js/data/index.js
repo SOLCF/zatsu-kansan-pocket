@@ -6,7 +6,8 @@ import { moneyItems } from './items/money.js';
 import { transportItems } from './items/transport.js';
 import { hobbyItems } from './items/hobby.js';
 import { natureItems } from './items/nature.js';
+import { claudeItems } from './items/claude.js';
 
 // SPEC のジャンル順に並べる
-export const ITEMS = [...kitchenItems, ...dailyItems, ...housingItems, ...moneyItems, ...transportItems, ...hobbyItems, ...natureItems];
+export const ITEMS = [...kitchenItems, ...dailyItems, ...housingItems, ...moneyItems, ...transportItems, ...hobbyItems, ...natureItems, ...claudeItems];
 export const getItem = (id) => ITEMS.find((i) => i.id === id);

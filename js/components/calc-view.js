@@ -58,7 +58,8 @@ export function renderCalc(root, item) {
   function paint(typing) {
     for (const f of item.fields) {
       const v = values[f.key];
-      const shown = Number.isFinite(v) ? (f.type === 'time' ? Math.round(v) : roundSig(v, 3)) : null;
+      // 時間（秒）と、トークン数のように丸めたくない整数の欄（f.integer）は整数で表示。それ以外は有効数字3桁。
+      const shown = Number.isFinite(v) ? (f.type === 'time' || f.integer ? Math.round(v) : roundSig(v, 3)) : null;
       const cur = ctl[f.key].read();
       const blankOptional = f.optional && shown === 0 && Number.isNaN(cur); // 任意欄の空欄は「0」で埋めない
       if (f.key !== typing && !blankOptional && shouldWrite(cur, v, shown)) ctl[f.key].write(shown);
