@@ -14,8 +14,9 @@ export function renderCalc(root, item) {
   const a = defaultAssumptions(item, getMyValues());
   const sel = {};
   for (const s of item.selects ?? []) {
-    sel[s.key] = s.options[0].value;
-    Object.assign(a, s.options[0].set);
+    const initial = s.options.find((o) => o.value === s.default) ?? s.options[0];
+    sel[s.key] = initial.value;
+    Object.assign(a, initial.set);
   }
 
   let values = {};
@@ -33,7 +34,9 @@ export function renderCalc(root, item) {
   }
 
   function onInput(key) {
-    const v = ctl[key].read();
+    const field = item.fields.find((f) => f.key === key);
+    const raw = ctl[key].read();
+    const v = field.optional && Number.isNaN(raw) ? 0 : raw; // 任意の欄は空欄＝0として計算を続ける
     last = key;
     if (!Number.isFinite(v) || v < 0) {
       for (const f of item.fields) if (!f.param || f.key === key) values[f.key] = null;
@@ -48,8 +51,9 @@ export function renderCalc(root, item) {
       const v = values[f.key];
       const shown = Number.isFinite(v) ? (f.type === 'time' ? Math.round(v) : roundSig(v, 3)) : null;
       const cur = ctl[f.key].read();
-      if (f.key !== typing && (Number.isFinite(cur) ? cur : null) !== shown) ctl[f.key].write(shown);
-      badges[f.key].hidden = !(Number.isFinite(v) && !f.param && f.key !== last);
+      const blankOptional = f.optional && shown === 0 && Number.isNaN(cur); // 任意欄の空欄は「0」で埋めない
+      if (f.key !== typing && !blankOptional && (Number.isFinite(cur) ? cur : null) !== shown) ctl[f.key].write(shown);
+      badges[f.key].hidden = !(Number.isFinite(v) && !f.param && !f.exact && f.key !== last); // exact: 切り上げの個数など「約」を付けない欄
     }
     fill(notes, ...(item.describe?.(values, a, sel) ?? []).map((t) => h('p', {}, t)));
   }
@@ -82,6 +86,7 @@ export function renderCalc(root, item) {
   }
 
   function renderAssumptions() {
+    if (!item.assumptions.length) return; // 前提値が無い項目（エアコンなど）は見出しも出さない
     fill(assumpBox, h('div', { class: 'assump-title' }, '前提値（タップでこの画面だけ変更）'), ...item.assumptions.map(chip));
   }
 
@@ -100,7 +105,7 @@ export function renderCalc(root, item) {
             reapply();
           },
         },
-        s.options.map((o) => h('option', { value: o.value }, o.label)),
+        s.options.map((o) => h('option', { value: o.value, selected: o.value === sel[s.key] }, o.label)),
       ),
     ),
   );

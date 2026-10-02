@@ -14,17 +14,28 @@ export function renderSettings(root) {
           'label',
           { class: 'field' },
           h('span', { class: 'label' }, d.label, h('small', {}, `使う換算：${d.usedBy}`)),
-          h('input', {
-            type: 'text',
-            inputmode: 'decimal',
-            value: String(my[d.key]),
-            onchange: (e) => {
-              const v = Number(e.target.value.trim());
-              if (Number.isFinite(v) && v > 0) setMyValue(d.key, v);
-              draw();
-            },
-          }),
-          h('span', { class: 'unit' }, d.unit),
+          d.options
+            ? h(
+                'select',
+                {
+                  onchange: (e) => {
+                    setMyValue(d.key, Number(e.target.value));
+                    draw();
+                  },
+                },
+                d.options.map((o) => h('option', { value: String(o.value), selected: o.value === my[d.key] }, o.label)),
+              )
+            : h('input', {
+                type: 'text',
+                inputmode: 'decimal',
+                value: String(my[d.key]),
+                onchange: (e) => {
+                  const v = Number(e.target.value.trim());
+                  if (Number.isFinite(v) && v > 0) setMyValue(d.key, v);
+                  draw();
+                },
+              }),
+          h('span', { class: 'unit' }, d.options ? '' : d.unit),
         ),
       ),
       h('button', { class: 'chip', type: 'button', onclick: () => { resetMyValues(); draw(); } }, '初期値に戻す'),
