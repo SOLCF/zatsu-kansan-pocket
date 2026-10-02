@@ -43,7 +43,11 @@ main > .field { margin-bottom: 14px; } /* 設定画面など、.fields で包ま
 .chip { font: inherit; font-size: .85rem; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; margin: 0 6px 6px 0; min-height: 40px; display: inline-flex; align-items: center; gap: 4px; }
 .chip small { color: var(--sub); }
 .chip-input { width: 5em; min-height: 32px; padding: 2px 8px; text-align: right; }
-.bands { list-style: none; padding: 0; } .bands li { padding: 10px; border-bottom: 1px solid var(--line); display: grid; } .bands .hit { background: var(--hit); }
+.bands { margin-top: 12px; }
+.ref-card.hit { border-color: var(--accent); background: var(--hit); box-shadow: 0 0 0 2px var(--accent); }
+.ref-card small { color: var(--sub); font-weight: 400; }
+.ref-card .image { margin: 2px 0 0; color: var(--accent); font-weight: 600; }
+.ref-card .small { margin: 0; }
 .small { color: var(--sub); font-size: .85rem; margin: 6px 0; }
 .ref-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; }
 .ref-card dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 6px 0 0; font-size: .9rem; }

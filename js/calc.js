@@ -27,3 +27,10 @@ export function baseCompute(fields) {
 }
 
 export const isNum = (x) => Number.isFinite(x);
+
+// 目安表示型: 値が入る帯（min以上max未満）を返す。どれにも入らなければ null。
+// 帯の定義: { min, max, label, range, details: [[見出し, 説明]...], ... }（max は最後だけ Infinity）
+export function findBand(bands, v) {
+  if (!isNum(v) || v < 0) return null;
+  return bands.find((b) => v >= b.min && v < b.max) ?? null;
+}

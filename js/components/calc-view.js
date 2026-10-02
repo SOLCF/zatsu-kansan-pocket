@@ -46,10 +46,13 @@ export function renderCalc(root, item) {
   function onInput(key) {
     const field = item.fields.find((f) => f.key === key);
     const raw = ctl[key].read();
-    const v = field.optional && Number.isNaN(raw) ? 0 : raw; // 任意の欄は空欄＝0として計算を続ける
+    // 任意の欄は空欄でも計算を続ける。空欄の値は既定で0、blankValue で変えられる（気温のように0が意味を持つ欄は null）。
+    const blank = field.optional && Number.isNaN(raw);
+    const v = blank ? (field.blankValue === undefined ? 0 : field.blankValue) : raw;
+    const valid = blank || (Number.isFinite(raw) && (raw >= 0 || field.signed)); // signed: マイナスを許す欄（気温）
     last = key;
     if (!field.param) lastMain = key;
-    if (!Number.isFinite(v) || v < 0) {
+    if (!valid) {
       for (const f of item.fields) if (!f.param || f.key === key) values[f.key] = null;
     } else {
       values = item.compute(key, v, { ...values }, a);
