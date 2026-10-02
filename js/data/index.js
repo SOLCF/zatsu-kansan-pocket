@@ -2,6 +2,7 @@
 import { kitchenItems } from './items/kitchen.js';
 import { dailyItems } from './items/daily.js';
 import { housingItems } from './items/housing.js';
+import { moneyItems } from './items/money.js';
 
-export const ITEMS = [...kitchenItems, ...dailyItems, ...housingItems];
+export const ITEMS = [...kitchenItems, ...dailyItems, ...housingItems, ...moneyItems];
 export const getItem = (id) => ITEMS.find((i) => i.id === id);

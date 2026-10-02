@@ -21,6 +21,7 @@ h3 { margin: 18px 0 6px; font-size: .9rem; color: var(--sub); }
 .select-row { display: grid; gap: 4px; margin-bottom: 12px; font-size: .9rem; color: var(--sub); }
 .fields { display: grid; gap: 10px; }
 .field { display: grid; grid-template-columns: 1fr 2.5em; align-items: center; gap: 2px 8px; }
+main > .field { margin-bottom: 14px; } /* 設定画面など、.fields で包まれていない欄の間隔 */
 .field .label { grid-column: 1 / -1; font-size: .9rem; color: var(--sub); }
 .field .approx { display: none; }
 .field:has(.approx:not([hidden])) .approx { display: inline; grid-row: 2; grid-column: 1; justify-self: start; z-index: 1; margin-left: 12px; color: var(--accent); font-weight: 700; pointer-events: none; }
