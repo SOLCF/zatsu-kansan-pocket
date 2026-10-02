@@ -35,6 +35,15 @@ export function approxYenRange(lo, hi, sig = 2) {
   return `約${fmtNum(lo, sig)}〜${fmtNum(hi, sig)}円`;
 }
 
+// 分 → 「約1時間12分」「約45分」
+export function approxHourMin(min) {
+  const m = Math.round(min);
+  if (m < 60) return `約${m}分`;
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return r === 0 ? `約${h}時間` : `約${h}時間${r}分`;
+}
+
 export function approxMinSec(sec) {
   const s = Math.round(sec);
   if (s < 60) return `約${s}秒`;

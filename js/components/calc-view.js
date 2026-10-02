@@ -4,6 +4,7 @@ import { h, fill } from '../dom.js';
 import { defaultAssumptions } from '../calc.js';
 import { roundSig, fmtNum } from '../format.js';
 import { getMyValues } from '../storage.js';
+import { cardsFor } from './table-view.js';
 
 const parse = (s) => {
   const t = s.trim().replace(/,/g, '');
@@ -12,9 +13,12 @@ const parse = (s) => {
 
 export function renderCalc(root, item) {
   const a = defaultAssumptions(item, getMyValues());
+  const my = getMyValues();
   const sel = {};
   for (const s of item.selects ?? []) {
-    const initial = s.options.find((o) => o.value === s.default) ?? s.options[0];
+    // 初期の選択肢: マイ基準値（s.myKey の値が option.set[s.by] と一致するもの）→ s.default → 先頭
+    const byMy = s.myKey ? s.options.find((o) => o.set?.[s.by] === my[s.myKey]) : null;
+    const initial = byMy ?? s.options.find((o) => o.value === s.default) ?? s.options[0];
     sel[s.key] = initial.value;
     Object.assign(a, initial.set);
   }
@@ -26,9 +30,15 @@ export function renderCalc(root, item) {
   const notes = h('div', { class: 'notes' });
   const assumpBox = h('div', { class: 'assumptions' });
 
+  // 再計算の基準にする欄。通常は直前に触った欄。item.anchorMain が真の項目（フィラメントなど）は、
+  // 任意の条件欄を触ったあとでも、直前に入力した「主な欄」（param でない欄）を基準にする。
+  let lastMain = null;
+  const anchor = () => (item.anchorMain && lastMain && Number.isFinite(values[lastMain]) ? lastMain : last);
+
   function reapply() {
-    if (last && Number.isFinite(values[last])) {
-      values = item.compute(last, values[last], { ...values }, a);
+    const key = anchor();
+    if (key && Number.isFinite(values[key])) {
+      values = item.compute(key, values[key], { ...values }, a);
     }
     paint();
   }
@@ -38,6 +48,7 @@ export function renderCalc(root, item) {
     const raw = ctl[key].read();
     const v = field.optional && Number.isNaN(raw) ? 0 : raw; // 任意の欄は空欄＝0として計算を続ける
     last = key;
+    if (!field.param) lastMain = key;
     if (!Number.isFinite(v) || v < 0) {
       for (const f of item.fields) if (!f.param || f.key === key) values[f.key] = null;
     } else {
@@ -53,7 +64,7 @@ export function renderCalc(root, item) {
       const cur = ctl[f.key].read();
       const blankOptional = f.optional && shown === 0 && Number.isNaN(cur); // 任意欄の空欄は「0」で埋めない
       if (f.key !== typing && !blankOptional && (Number.isFinite(cur) ? cur : null) !== shown) ctl[f.key].write(shown);
-      badges[f.key].hidden = !(Number.isFinite(v) && !f.param && !f.exact && f.key !== last); // exact: 切り上げの個数など「約」を付けない欄
+      badges[f.key].hidden = !(Number.isFinite(v) && !f.param && !f.exact && f.key !== anchor()); // exact: 切り上げの個数など「約」を付けない欄
     }
     fill(notes, ...(item.describe?.(values, a, sel) ?? []).map((t) => h('p', {}, t)));
   }
@@ -139,5 +150,5 @@ export function renderCalc(root, item) {
   });
 
   renderAssumptions();
-  fill(root, h('h2', {}, item.title), ...selectEls, h('div', { class: 'fields' }, rows), notes, item.note ? h('p', { class: 'small' }, item.note) : null, assumpBox);
+  fill(root, h('h2', {}, item.title), ...selectEls, h('div', { class: 'fields' }, rows), notes, item.note ? h('p', { class: 'small' }, item.note) : null, assumpBox, item.reference ? h('div', { class: 'reference' }, cardsFor(item.reference)) : null);
 }
