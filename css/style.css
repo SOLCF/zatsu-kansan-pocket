@@ -43,4 +43,7 @@ h3 { margin: 18px 0 6px; font-size: .9rem; color: var(--sub); }
 .chip small { color: var(--sub); }
 .chip-input { width: 5em; min-height: 32px; padding: 2px 8px; text-align: right; }
 .bands { list-style: none; padding: 0; } .bands li { padding: 10px; border-bottom: 1px solid var(--line); display: grid; } .bands .hit { background: var(--hit); }
-.ref { width: 100%; border-collapse: collapse; } .ref th, .ref td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; }
+.small { color: var(--sub); font-size: .85rem; margin: 6px 0; }
+.ref-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; }
+.ref-card dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 6px 0 0; font-size: .9rem; }
+.ref-card dt { color: var(--sub); } .ref-card dd { margin: 0; } .ref th, .ref td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; }

@@ -134,5 +134,5 @@ export function renderCalc(root, item) {
   });
 
   renderAssumptions();
-  root.replaceChildren(h('h2', {}, item.title), ...selectEls, h('div', { class: 'fields' }, rows), notes, assumpBox);
+  root.replaceChildren(h('h2', {}, item.title), ...selectEls, h('div', { class: 'fields' }, rows), notes, item.note ? h('p', { class: 'small' }, item.note) : null, assumpBox);
 }
