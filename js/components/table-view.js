@@ -3,6 +3,7 @@
 // 先頭の列がカードの見出し。「—」や空の値は省く。検索は全表の行を絞り込む（型番・呼び名・メモのどれでも当たる）。
 // cardsFor は計算型の「参考表」（item.reference）からも使う。
 import { h, fill } from '../dom.js';
+import { titleBar } from './fav.js';
 
 const hasValue = (v) => String(v).trim() !== '' && String(v).trim() !== '—';
 
@@ -34,7 +35,7 @@ export function renderTable(root, item) {
   };
   draw('');
   fill(root,
-    h('h2', {}, item.title),
+    titleBar(item),
     h('input', { class: 'search', type: 'search', placeholder: '型番・サイズで検索（例：LR44、単3）', oninput: (e) => draw(e.target.value) }),
     body,
     ...(item.notes ?? []).map((n) => h('p', { class: 'small' }, n)),

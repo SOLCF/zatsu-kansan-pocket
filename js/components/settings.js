@@ -1,15 +1,37 @@
-// マイ基準値の設定画面。入力した時点で保存し、関係する全換算に反映される。
+// 設定画面: 画面の色（ライト／ダーク）と、マイ基準値。入力した時点で保存し、すぐ反映される。
 import { h, fill } from '../dom.js';
 import { MY_VALUE_DEFS } from '../data/myvalues.js';
-import { getMyValues, setMyValue, resetMyValues } from '../storage.js';
+import { getMyValues, setMyValue, resetMyValues, getTheme, setTheme } from '../storage.js';
+import { THEMES, applyTheme } from '../theme.js';
 import { parseNumber } from '../calc.js';
 
 export function renderSettings(root) {
+  const themeRow = () =>
+    h(
+      'label',
+      { class: 'field' },
+      h('span', { class: 'label' }, '画面の色'),
+      h(
+        'select',
+        {
+          'aria-label': '画面の色',
+          onchange: (e) => {
+            setTheme(e.target.value);
+            applyTheme(e.target.value);
+          },
+        },
+        THEMES.map((t) => h('option', { value: t.value, selected: t.value === getTheme() }, t.label)),
+      ),
+      h('span', { class: 'unit' }),
+    );
+
   const draw = () => {
     const my = getMyValues();
     fill(root,
-      h('h2', {}, 'マイ基準値'),
-      h('p', { class: 'notes' }, '登録すると、関係する換算の前提値に使われます。この端末の中にだけ保存されます。'),
+      h('h2', {}, '設定'),
+      themeRow(),
+      h('h3', {}, 'マイ基準値'),
+      h('p', { class: 'small' }, '登録すると、関係する換算の前提値に使われます。この端末の中にだけ保存されます。'),
       ...MY_VALUE_DEFS.map((d) =>
         h(
           'label',
@@ -39,7 +61,7 @@ export function renderSettings(root) {
           h('span', { class: 'unit' }, d.options ? '' : d.unit),
         ),
       ),
-      h('button', { class: 'chip', type: 'button', onclick: () => { resetMyValues(); draw(); } }, '初期値に戻す'),
+      h('button', { class: 'chip', type: 'button', onclick: () => { resetMyValues(); draw(); } }, 'マイ基準値を初期値に戻す'),
     );
   };
   draw();

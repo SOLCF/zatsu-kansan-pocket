@@ -4,6 +4,10 @@ import { renderSettings } from './components/settings.js';
 import { renderCalc } from './components/calc-view.js';
 import { renderTable } from './components/table-view.js';
 import { renderGuide } from './components/guide-view.js';
+import { getTheme } from './storage.js';
+import { applyTheme } from './theme.js';
+
+applyTheme(getTheme()); // index.html の先頭でも適用済み。念のためここでも保存値に合わせる
 
 const VIEWS = { calc: renderCalc, table: renderTable, guide: renderGuide };
 const main = document.getElementById('main');
@@ -17,7 +21,7 @@ function route() {
   window.scrollTo(0, 0); // 画面が変わったら先頭から（ホームを下までスクロールしたあとに項目を開いても途中から始まらない）
   document.title = APP_NAME;
   if (page === 'settings') {
-    document.title = `マイ基準値 | ${APP_NAME}`;
+    document.title = `設定 | ${APP_NAME}`;
     return renderSettings(main);
   }
   if (page === 'item') {

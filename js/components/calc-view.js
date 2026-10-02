@@ -1,6 +1,7 @@
 // 計算型の共通画面。どの欄に入力しても他の欄が更新され、結果の下に前提値を出す。
 // 前提値のタップ編集は「この画面を開いている間だけ」有効（保存しない）。
 import { h, fill } from '../dom.js';
+import { titleBar } from './fav.js';
 import { defaultAssumptions, parseNumber as parse, shouldWrite } from '../calc.js';
 import { roundSig, fmtNum } from '../format.js';
 import { getMyValues } from '../storage.js';
@@ -148,6 +149,13 @@ export function renderCalc(root, item) {
     return h('label', { class: 'field' }, label, badges[f.key], input, h('span', { class: 'unit' }, f.unit));
   });
 
+  // 欄の初期値（f.default）。例: 電子レンジの表記W数。最初から入れておき、計算にも使う。
+  for (const f of item.fields) {
+    if (f.default === undefined) continue;
+    ctl[f.key].write(f.default);
+    values[f.key] = f.default;
+  }
+
   renderAssumptions();
-  fill(root, h('h2', {}, item.title), ...selectEls, h('div', { class: 'fields' }, rows), notes, item.note ? h('p', { class: 'small' }, item.note) : null, assumpBox, item.reference ? h('div', { class: 'reference' }, cardsFor(item.reference)) : null);
+  fill(root, titleBar(item), ...selectEls, h('div', { class: 'fields' }, rows), notes, item.note ? h('p', { class: 'small' }, item.note) : null, assumpBox, item.reference ? h('div', { class: 'reference' }, cardsFor(item.reference)) : null);
 }

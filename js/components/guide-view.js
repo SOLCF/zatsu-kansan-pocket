@@ -3,6 +3,7 @@
 //          below?: 最小値未満のときの説明, extra?: (v) => 追加の1行, disclaimer }
 // 値を入れなくても全帯を一覧できる（帯を読み比べる使い方も想定）。
 import { h, fill } from '../dom.js';
+import { titleBar } from './fav.js';
 import { findBand, isNum, parseNumber as parse } from '../calc.js';
 
 const card = (b, hit = false) =>
@@ -32,7 +33,7 @@ export function renderGuide(root, item) {
   draw(NaN);
 
   fill(root,
-    h('h2', {}, item.title),
+    titleBar(item),
     h(
       'label',
       { class: 'field' },

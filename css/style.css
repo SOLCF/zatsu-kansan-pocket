@@ -4,9 +4,13 @@
   --accent: #2f6f5e; --hit: #e3f1ec;
   --head: #2f6f5e; /* ヘッダーは白文字を載せるので、ダークモードでも濃い緑のまま（accentは明るくなるためコントラスト不足） */
 }
+/* 画面の色: 設定で選んだ値は <html data-theme="light|dark"> に入る（auto は付かず、端末の設定に従う）。
+   ダークの色は「端末がダーク かつ ライト固定でない」場合と「ダーク固定」の場合で同じなので、2か所に同じ値を書く。 */
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #151a18; --fg: #e8ecea; --sub: #9aa6a0; --card: #1f2623; --line: #33403a; --accent: #6cc2a8; --hit: #23372f; }
+  :root:not([data-theme="light"]) { --bg: #151a18; --fg: #e8ecea; --sub: #9aa6a0; --card: #1f2623; --line: #33403a; --accent: #6cc2a8; --hit: #23372f; }
 }
+:root[data-theme="dark"] { color-scheme: dark; --bg: #151a18; --fg: #e8ecea; --sub: #9aa6a0; --card: #1f2623; --line: #33403a; --accent: #6cc2a8; --hit: #23372f; }
+:root[data-theme="light"] { color-scheme: light; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, "Hiragino Sans", "Yu Gothic", sans-serif; }
 header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); background: var(--head); color: #fff; position: sticky; top: 0; z-index: 1; }
@@ -19,6 +23,13 @@ h2 { margin: 8px 0 12px; font-size: 1.25rem; }
 h3 { margin: 18px 0 6px; font-size: .9rem; color: var(--sub); }
 .search, select, input[type=text] { font: inherit; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 48px; width: 100%; }
 .card { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; color: inherit; text-decoration: none; min-height: 56px; justify-content: center; }
+.card-row { display: flex; align-items: stretch; gap: 8px; margin-bottom: 8px; }
+.card-row .card { flex: 1; margin-bottom: 0; min-width: 0; }
+.title-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.title-bar h2 { margin: 8px 0 12px; }
+.fav { font-size: 1.5rem; line-height: 1; min-width: 48px; min-height: 48px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--sub); cursor: pointer; }
+.title-bar .fav { border-color: transparent; background: transparent; }
+.fav.on { color: #d99a00; }
 .card small, .label small { color: var(--sub); display: block; }
 .select-row { display: grid; gap: 4px; margin-bottom: 12px; font-size: .9rem; color: var(--sub); }
 .fields { display: grid; gap: 10px; }

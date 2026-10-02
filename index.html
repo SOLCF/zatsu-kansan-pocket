@@ -8,13 +8,15 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <!-- 画面の色の設定を、画面が描かれる前に適用する（ライト↔ダークのちらつき防止）。js/theme.js と同じ保存キー -->
+  <script>try{var t=localStorage.getItem('zkp.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header>
     <a id="back" href="#/" hidden aria-label="戻る">‹</a>
     <h1><a href="#/">雑換算ポケット</a></h1>
-    <a class="gear" href="#/settings" aria-label="マイ基準値">⚙</a>
+    <a class="gear" href="#/settings" aria-label="設定">⚙</a>
   </header>
   <main id="main"></main>
   <script type="module" src="js/app.js"></script>

@@ -76,7 +76,8 @@ export const microwave = {
   kind: 'calc',
   hint: 'レシピのW数を自宅用に',
   fields: [
-    { key: 'labelW', label: '表記のW数', unit: 'W', param: true },
+    // 表記のW数は最初から500Wを入れておく（レシピや惣菜・冷凍食品の表記は500Wが多いため）
+    { key: 'labelW', label: '表記のW数', unit: 'W', param: true, default: 500 },
     // 時間欄は画面では「◯分◯秒」の2欄。値は秒で持つ。
     { key: 'labelSec', label: '表記の時間', unit: '秒', type: 'time', param: true },
     { key: 'homeSec', label: '自宅での時間', unit: '秒', type: 'time' },
