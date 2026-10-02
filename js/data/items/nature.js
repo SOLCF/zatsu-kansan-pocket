@@ -1,6 +1,6 @@
-// 天気・自然の項目（標高差・風速・降水量）。根拠は各コメントを参照（2026-10 時点でWeb確認）。
+// 天気・自然の項目（標高差・風速・降水量・雨水量・体感）。根拠は各コメントを参照（2026-10 時点でWeb確認）。
 import { isNum } from '../../calc.js';
-import { approx, fmtNum } from '../../format.js';
+import { approx, approxRange, fmtNum } from '../../format.js';
 
 // ---- 標高差 ----
 // 気温は標高が100m上がるごとに約0.6℃下がる（国際標準大気では0.649℃/100m）。実際は天候・湿度で変わる
@@ -168,4 +168,104 @@ export const rain = {
     '気象庁「雨の強さと降り方」の区分です（目安）。大雨による災害のおそれがあるときは警報・注意報が出ます。基準は地域で異なるので、最新の気象情報を確認してください。',
 };
 
-export const natureItems = [elevation, wind, rain];
+// ---- 雨水量 ----
+// 降水量1mm ＝ 1㎡あたり1L（1㎡に1mmの深さで降る水は1L）。屋根は真上から見た広さ（水平に投影した面積）で考える。
+// 実際に貯められるのは、流れ損失やフィルターで8割程度と見込むことが多い。
+//   出典: https://ietateta-tips.com/rainwater-tank-calculator/ ほか。バケツ10L・浴槽約200L・ペットボトル2Lは目安。
+export const RAIN_COLLECT_RANGE = [80, 100];
+
+export const rainwater = {
+  id: 'rainwater',
+  genre: '天気・自然',
+  title: '雨水量',
+  kind: 'calc',
+  hint: '降水量と面積 → 雨水の量（L）',
+  fields: [
+    { key: 'mm', label: '降水量（降った雨の深さ）', unit: 'mm' },
+    { key: 'area', label: '面積（屋根・庭・駐車場など）', unit: '㎡', param: true },
+    { key: 'liters', label: '雨水の量', unit: 'L' },
+  ],
+  assumptions: [{ key: 'collect', label: '集水率', unit: '%', value: 100 }],
+  compute: (key, value, values, a) => {
+    const out = { ...values, [key]: value };
+    const k = isNum(out.area) && out.area > 0 ? out.area * (a.collect / 100) : 0; // 1mmの雨で貯まるL
+    if (key === 'liters') out.mm = k > 0 ? value / k : null;
+    else if (isNum(out.mm)) out.liters = k > 0 ? out.mm * k : null;
+    else if (isNum(out.liters)) out.mm = k > 0 ? out.liters / k : null;
+    return out;
+  },
+  describe: (v, a) => {
+    if (!isNum(v.liters) || v.liters <= 0) return [];
+    const L = v.liters;
+    const lines = [`バケツ（10L）${approx(L / 10, '杯分', 2)} ／ 浴槽（約200L）${approx(L / 200, '杯分', 2)} ／ 2Lペットボトル ${approx(L / 2, '本分', 2)}`];
+    if (L >= 1000) lines.push(`${approx(L / 1000, 'トン', 2)}（1㎥）`);
+    if (a.collect === 100) {
+      const [lo, hi] = RAIN_COLLECT_RANGE;
+      lines.push(`実際に貯められるのは ${approxRange((L * lo) / 100, (L * hi) / 100, 'L', 2)}（集水率${lo}〜${hi}%）`);
+    }
+    return lines;
+  },
+  note: '1mmの雨は1㎡に1L。屋根は斜面の面積ではなく、真上から見た広さで計算します。風や蒸発、最初の汚れた雨などは含みません。',
+};
+
+// ---- 体感（不快指数）----
+// 不快指数 DI = 0.81×気温 + 0.01×湿度×(0.99×気温 − 14.3) + 46.3。区分は一般に使われる目安。
+//   出典: https://www.jsme.or.jp/jsme-medwiki/doku.php?id=03%3A1011145 ／ https://www.calc-site.com/healths/discomfort_index
+// 風があると体感は下がる。風速1m/sごとに約1℃というのは登山などでよく使う目安（正確な式ではない）。
+//   出典: https://www.sotolover.com/2024/01/81492/
+export const DI_BANDS = [
+  { min: -Infinity, max: 55, range: '〜55未満', label: '寒い' },
+  { min: 55, max: 60, range: '55以上60未満', label: '肌寒い' },
+  { min: 60, max: 65, range: '60以上65未満', label: '何も感じない' },
+  { min: 65, max: 70, range: '65以上70未満', label: '快い' },
+  { min: 70, max: 75, range: '70以上75未満', label: '暑くない' },
+  { min: 75, max: 80, range: '75以上80未満', label: 'やや暑い' },
+  { min: 80, max: 85, range: '80以上85未満', label: '暑くて汗が出る' },
+  { min: 85, max: Infinity, range: '85以上', label: '暑くてたまらない' },
+];
+
+export const discomfortIndex = (t, h) => 0.81 * t + 0.01 * h * (0.99 * t - 14.3) + 46.3;
+export const diBand = (di) => DI_BANDS.find((b) => di >= b.min && di < b.max) ?? null;
+
+export const comfort = {
+  id: 'comfort',
+  genre: '天気・自然',
+  title: '体感（不快指数）',
+  kind: 'calc',
+  hint: '気温と湿度 → 不快指数と体感、風の影響',
+  fields: [
+    { key: 't', label: '気温', unit: '℃', param: true, signed: true },
+    { key: 'h', label: '湿度', unit: '%', param: true },
+    { key: 'wind', label: '風速（任意）', unit: 'm/s', param: true, optional: true, blankValue: null },
+    { key: 'di', label: '不快指数', unit: '', readonly: true },
+    { key: 'feels', label: '風を考えた体感温度', unit: '℃', readonly: true },
+  ],
+  assumptions: [{ key: 'windCool', label: '風速1m/sあたりの低下', unit: '℃', value: 1 }],
+  compute: (key, value, values, a) => {
+    const out = { ...values, [key]: value };
+    out.di = isNum(out.t) && isNum(out.h) && out.h >= 0 && out.h <= 100 ? discomfortIndex(out.t, out.h) : null;
+    out.feels = isNum(out.t) && isNum(out.wind) ? out.t - out.wind * a.windCool : null;
+    return out;
+  },
+  describe: (v) => {
+    const lines = [];
+    if (isNum(v.h) && (v.h < 0 || v.h > 100)) return ['湿度は0〜100%で入れてください'];
+    if (isNum(v.di)) {
+      lines.push(`不快指数 ${fmtNum(v.di, 3)}：${diBand(v.di)?.label ?? ''}（目安）`);
+      lines.push('熱中症の危険度は「暑さ指数（WBGT）」で見ます。不快指数とは別なので、環境省などの最新の情報を確認してください。');
+    }
+    if (isNum(v.feels)) lines.push(`風があると 体感は ${approx(v.feels, '℃', 3)} くらい（風速1m/sで約1℃下がる目安）`);
+    return lines;
+  },
+  reference: [
+    {
+      title: '不快指数の目安',
+      columns: ['不快指数', '体感'],
+      rows: DI_BANDS.map((b) => [b.range, b.label]),
+      note: '一般に使われる目安です。体感は人や服装、日差し、風でも変わります。',
+    },
+  ],
+  note: '不快指数 ＝ 0.81×気温 ＋ 0.01×湿度×(0.99×気温 − 14.3) ＋ 46.3。風は不快指数には入っていません。',
+};
+
+export const natureItems = [elevation, wind, rain, rainwater, comfort];

@@ -6,6 +6,7 @@ import { defaultAssumptions, parseNumber as parse, shouldWrite } from '../calc.j
 import { roundSig, fmtNum } from '../format.js';
 import { getMyValues } from '../storage.js';
 import { cardsFor } from './table-view.js';
+import { parseIso, toIso } from '../dates.js';
 
 export function renderCalc(root, item) {
   const my = getMyValues();
@@ -60,7 +61,7 @@ export function renderCalc(root, item) {
     for (const f of item.fields) {
       const v = values[f.key];
       // 時間（秒）と、トークン数のように丸めたくない整数の欄（f.integer）は整数で表示。それ以外は有効数字3桁。
-      const shown = Number.isFinite(v) ? (f.type === 'time' || f.integer ? Math.round(v) : roundSig(v, 3)) : null;
+      const shown = Number.isFinite(v) ? (f.type === 'time' || f.type === 'date' || f.integer ? Math.round(v) : roundSig(v, 3)) : null;
       const cur = ctl[f.key].read();
       const blankOptional = f.optional && shown === 0 && Number.isNaN(cur); // 任意欄の空欄は「0」で埋めない
       if (f.key !== typing && !blankOptional && shouldWrite(cur, v, shown)) ctl[f.key].write(shown);
@@ -144,6 +145,12 @@ export function renderCalc(root, item) {
       };
       return h('div', { class: 'field time' }, label, badges[f.key], min, h('span', { class: 'unit' }, '分'), sec, h('span', { class: 'unit' }, '秒'));
     }
+    if (f.type === 'date') {
+      // 日付欄（カレンダーで選ぶ）。値は「1970-01-01 からの日数」で扱う。
+      const input = h('input', { type: 'date', 'aria-label': f.label, oninput: () => onInput(f.key) });
+      ctl[f.key] = { read: () => parseIso(input.value), write: (v) => (input.value = v === null ? '' : toIso(v)) };
+      return h('label', { class: 'field' }, label, badges[f.key], input, h('span', { class: 'unit' }, f.unit));
+    }
     const input = numInput(f, f.label, 'decimal');
     ctl[f.key] = { read: () => parse(input.value), write: (v) => (input.value = v === null ? '' : String(v)) };
     return h('label', { class: 'field' }, label, badges[f.key], input, h('span', { class: 'unit' }, f.unit));
@@ -152,8 +159,9 @@ export function renderCalc(root, item) {
   // 欄の初期値（f.default）。例: 電子レンジの表記W数。最初から入れておき、計算にも使う。
   for (const f of item.fields) {
     if (f.default === undefined) continue;
-    ctl[f.key].write(f.default);
-    values[f.key] = f.default;
+    const initial = typeof f.default === 'function' ? f.default() : f.default; // 関数なら開いた時点の値（例：今日の日付）
+    ctl[f.key].write(initial);
+    values[f.key] = initial;
   }
 
   renderAssumptions();

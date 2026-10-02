@@ -6,8 +6,9 @@ import { moneyItems } from './items/money.js';
 import { transportItems } from './items/transport.js';
 import { hobbyItems } from './items/hobby.js';
 import { natureItems } from './items/nature.js';
+import { dateItems } from './items/date.js';
 import { claudeItems } from './items/claude.js';
 
-// SPEC のジャンル順に並べる
-export const ITEMS = [...kitchenItems, ...dailyItems, ...housingItems, ...moneyItems, ...transportItems, ...hobbyItems, ...natureItems, ...claudeItems];
+// SPEC のジャンル順に並べる。Claude は一番下
+export const ITEMS = [...kitchenItems, ...dailyItems, ...housingItems, ...moneyItems, ...transportItems, ...hobbyItems, ...natureItems, ...dateItems, ...claudeItems];
 export const getItem = (id) => ITEMS.find((i) => i.id === id);

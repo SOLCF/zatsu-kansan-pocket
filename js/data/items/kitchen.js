@@ -1,6 +1,6 @@
 // キッチンの換算項目。前提値の根拠は各コメントを参照（2026-10 時点でWeb確認）。
 import { baseCompute, isNum } from '../../calc.js';
-import { approx, approxRange, approxMinSec } from '../../format.js';
+import { approx, approxRange, approxMinSec, fmtNum } from '../../format.js';
 
 // ---- 米 ----
 // 1合=180mL≒約150g、水は米と同量〜1合あたり約200mL、炊き上がりは生米の約2.2倍（体積・重量とも）。
@@ -100,4 +100,59 @@ export const microwave = {
   describe: (v) => (isNum(v.homeSec) ? [`自宅では ${approxMinSec(v.homeSec)}`] : []),
 };
 
-export const kitchenItems = [rice, noodle, microwave];
+// ---- 計量（大さじ・小さじ・カップ ⇄ g）----
+// 小さじ=5mL・大さじ=15mL・1カップ=200mL。食材ごとの重さ（g）は大阪市「カップ・スプーンによる食品の重量」の表。
+//   出典: https://www.city.osaka.lg.jp/kenko/page/0000017084.html （同じ値が他の自治体・栄養学校の表にもある）
+// 米は 1合=180mL≒150g（米の項目と同じ）から、0.833g/mL として求めた値。
+// 粉類は、ふるい方・詰め方で重さが変わる。
+export const MEASURE_FOODS = [
+  { value: 'sugar', label: '砂糖（上白糖）', gS: 3, gT: 9, gC: 130 },
+  { value: 'salt', label: '食塩', gS: 6, gT: 18, gC: 240 },
+  { value: 'shoyu', label: 'しょうゆ', gS: 6, gT: 18, gC: 236 },
+  { value: 'miso', label: 'みそ', gS: 6, gT: 18, gC: 230 },
+  { value: 'mirin', label: 'みりん', gS: 6, gT: 18, gC: 230 },
+  { value: 'water', label: '水・酢・酒', gS: 5, gT: 15, gC: 200 },
+  { value: 'oil', label: '油', gS: 4, gT: 12, gC: 180 },
+  { value: 'butter', label: 'バター・マーガリン', gS: 4, gT: 12, gC: 180 },
+  { value: 'mayo', label: 'マヨネーズ', gS: 4, gT: 12, gC: 190 },
+  { value: 'ketchup', label: 'トマトケチャップ', gS: 5, gT: 15, gC: 230 },
+  { value: 'flour', label: '小麦粉', gS: 3, gT: 9, gC: 110 },
+  { value: 'starch', label: 'かたくり粉', gS: 3, gT: 9, gC: 130 },
+  { value: 'breadcrumb', label: 'パン粉', gS: 1, gT: 3, gC: 40 },
+  { value: 'skimmilk', label: 'スキムミルク', gS: 2, gT: 6, gC: 90 },
+  { value: 'rice', label: '米（精白米）', gS: 25 / 6, gT: 12.5, gC: 500 / 3 },
+];
+export const CUP_ML = 200;
+export const GO_ML = 180;
+
+export const measure = {
+  id: 'measure',
+  genre: 'キッチン',
+  title: '計量',
+  kind: 'calc',
+  hint: '大さじ・小さじ・カップ ⇄ g（食材別）',
+  selects: [
+    {
+      key: 'food',
+      label: '食材',
+      default: 'sugar',
+      options: MEASURE_FOODS.map((f) => ({ value: f.value, label: f.label, set: { gS: f.gS, gT: f.gT, gC: f.gC } })),
+    },
+  ],
+  fields: [
+    { key: 'tbsp', label: '大さじ（15mL）', unit: '杯', toBase: (v, a) => v * a.gT, fromBase: (b, a) => b / a.gT },
+    { key: 'tsp', label: '小さじ（5mL）', unit: '杯', toBase: (v, a) => v * a.gS, fromBase: (b, a) => b / a.gS },
+    { key: 'cup', label: 'カップ（200mL）', unit: '杯', toBase: (v, a) => v * a.gC, fromBase: (b, a) => b / a.gC },
+    { key: 'g', label: '重さ', unit: 'g', toBase: (v) => v, fromBase: (b) => b },
+    { key: 'ml', label: '体積', unit: 'mL', toBase: (v, a) => (v * a.gC) / CUP_ML, fromBase: (b, a) => (b * CUP_ML) / a.gC },
+  ],
+  assumptions: [],
+  describe: (v, a, sel) => {
+    if (sel.food !== 'rice' || !isNum(v.ml)) return [];
+    return [`お米は1合＝${GO_ML}mL なので ${approx(v.ml / GO_ML, '合', 2)}（約${fmtNum(v.g, 2)}g）`];
+  },
+  note: '小さじ・大さじ・カップはすり切りが基準です。粉類はふるい方や詰め方でも変わります。お米のカップは1合＝180mLです。',
+};
+measure.compute = baseCompute(measure.fields);
+
+export const kitchenItems = [rice, noodle, microwave, measure];

@@ -1,10 +1,10 @@
 // 同一オリジンのみ扱う。外部通信はしない。
 // キャッシュ優先で即表示し、裏で更新（stale-while-revalidate）。構成を変えたら CACHE を上げる。
-const CACHE = 'zkp-v15';
+const CACHE = 'zkp-v17';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
-  'js/app.js', 'js/dom.js', 'js/calc.js', 'js/format.js', 'js/storage.js', 'js/theme.js',
-  'js/data/index.js', 'js/data/myvalues.js', 'js/data/items/kitchen.js', 'js/data/items/daily.js', 'js/data/items/housing.js', 'js/data/items/money.js', 'js/data/items/transport.js', 'js/data/items/hobby.js', 'js/data/items/nature.js', 'js/data/items/claude.js',
+  'js/app.js', 'js/dom.js', 'js/calc.js', 'js/format.js', 'js/storage.js', 'js/theme.js', 'js/dates.js',
+  'js/data/index.js', 'js/data/myvalues.js', 'js/data/items/kitchen.js', 'js/data/items/daily.js', 'js/data/items/housing.js', 'js/data/items/money.js', 'js/data/items/transport.js', 'js/data/items/hobby.js', 'js/data/items/nature.js', 'js/data/items/date.js', 'js/data/items/claude.js',
   'js/components/home.js', 'js/components/fav.js', 'js/components/settings.js', 'js/components/calc-view.js',
   'js/components/table-view.js', 'js/components/guide-view.js',
   'icons/icon-192.png', 'icons/icon-512.png',
