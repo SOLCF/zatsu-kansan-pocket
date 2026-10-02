@@ -4,7 +4,8 @@ import { ITEMS } from '../data/index.js';
 export function renderHome(root) {
   const list = h('div', { class: 'list' });
   const draw = (q) => {
-    const hits = ITEMS.filter((i) => `${i.genre} ${i.title} ${i.hint ?? ''}`.includes(q.trim()));
+    const needle = q.trim().toLowerCase(); // mAh・kW など英字は大文字小文字を区別しない
+    const hits = ITEMS.filter((i) => `${i.genre} ${i.title} ${i.hint ?? ''}`.toLowerCase().includes(needle));
     const genres = [...new Set(hits.map((i) => i.genre))];
     fill(list,
       ...genres.flatMap((g) => [

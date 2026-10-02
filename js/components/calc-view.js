@@ -1,19 +1,14 @@
 // 計算型の共通画面。どの欄に入力しても他の欄が更新され、結果の下に前提値を出す。
 // 前提値のタップ編集は「この画面を開いている間だけ」有効（保存しない）。
 import { h, fill } from '../dom.js';
-import { defaultAssumptions } from '../calc.js';
+import { defaultAssumptions, parseNumber as parse, shouldWrite } from '../calc.js';
 import { roundSig, fmtNum } from '../format.js';
 import { getMyValues } from '../storage.js';
 import { cardsFor } from './table-view.js';
 
-const parse = (s) => {
-  const t = s.trim().replace(/,/g, '');
-  return t === '' ? NaN : Number(t);
-};
-
 export function renderCalc(root, item) {
-  const a = defaultAssumptions(item, getMyValues());
   const my = getMyValues();
+  const a = defaultAssumptions(item, my);
   const sel = {};
   for (const s of item.selects ?? []) {
     // 初期の選択肢: マイ基準値（s.myKey の値が option.set[s.by] と一致するもの）→ s.default → 先頭
@@ -66,7 +61,7 @@ export function renderCalc(root, item) {
       const shown = Number.isFinite(v) ? (f.type === 'time' ? Math.round(v) : roundSig(v, 3)) : null;
       const cur = ctl[f.key].read();
       const blankOptional = f.optional && shown === 0 && Number.isNaN(cur); // 任意欄の空欄は「0」で埋めない
-      if (f.key !== typing && !blankOptional && (Number.isFinite(cur) ? cur : null) !== shown) ctl[f.key].write(shown);
+      if (f.key !== typing && !blankOptional && shouldWrite(cur, v, shown)) ctl[f.key].write(shown);
       badges[f.key].hidden = !(Number.isFinite(v) && !f.param && !f.exact && f.key !== anchor()); // exact: 切り上げの個数など「約」を付けない欄
     }
     fill(notes, ...(item.describe?.(values, a, sel) ?? []).map((t) => h('p', {}, t)));

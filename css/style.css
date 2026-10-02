@@ -1,13 +1,15 @@
 :root {
+  color-scheme: light dark; /* 選択リストやスクロールバーなど、ブラウザ標準の部品も端末のダークモードに合わせる */
   --bg: #f6f7f5; --fg: #1d2421; --sub: #66716c; --card: #fff; --line: #d9dfdb;
   --accent: #2f6f5e; --hit: #e3f1ec;
+  --head: #2f6f5e; /* ヘッダーは白文字を載せるので、ダークモードでも濃い緑のまま（accentは明るくなるためコントラスト不足） */
 }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #151a18; --fg: #e8ecea; --sub: #9aa6a0; --card: #1f2623; --line: #33403a; --accent: #6cc2a8; --hit: #23372f; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, "Hiragino Sans", "Yu Gothic", sans-serif; }
-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); background: var(--accent); color: #fff; position: sticky; top: 0; z-index: 1; }
+header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); background: var(--head); color: #fff; position: sticky; top: 0; z-index: 1; }
 header a { color: inherit; text-decoration: none; }
 header h1 { flex: 1; margin: 0; font-size: 1.1rem; }
 header #back, header .gear { font-size: 1.6rem; min-width: 44px; min-height: 44px; display: grid; place-items: center; }
@@ -42,7 +44,7 @@ main > .field { margin-bottom: 14px; } /* 設定画面など、.fields で包ま
 .assump-title { margin-bottom: 6px; }
 .chip { font: inherit; font-size: .85rem; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; margin: 0 6px 6px 0; min-height: 40px; display: inline-flex; align-items: center; gap: 4px; }
 .chip small { color: var(--sub); }
-.chip-input { width: 5em; min-height: 32px; padding: 2px 8px; text-align: right; }
+.chip .chip-input { width: 5em; min-height: 32px; padding: 2px 8px; text-align: right; font-size: 1rem; } /* 16px未満だとiOSで入力時に拡大される */
 .bands { margin-top: 12px; }
 .ref-card.hit { border-color: var(--accent); background: var(--hit); box-shadow: 0 0 0 2px var(--accent); }
 .ref-card small { color: var(--sub); font-weight: 400; }

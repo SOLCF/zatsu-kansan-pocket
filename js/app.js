@@ -1,4 +1,3 @@
-import { h } from './dom.js';
 import { getItem } from './data/index.js';
 import { renderHome } from './components/home.js';
 import { renderSettings } from './components/settings.js';
@@ -10,13 +9,23 @@ const VIEWS = { calc: renderCalc, table: renderTable, guide: renderGuide };
 const main = document.getElementById('main');
 const back = document.getElementById('back');
 
+const APP_NAME = '雑換算ポケット';
+
 function route() {
   const [, page, id] = location.hash.split('/');
   back.hidden = !page;
-  if (page === 'settings') return renderSettings(main);
+  window.scrollTo(0, 0); // 画面が変わったら先頭から（ホームを下までスクロールしたあとに項目を開いても途中から始まらない）
+  document.title = APP_NAME;
+  if (page === 'settings') {
+    document.title = `マイ基準値 | ${APP_NAME}`;
+    return renderSettings(main);
+  }
   if (page === 'item') {
     const item = getItem(id);
-    if (item) return VIEWS[item.kind](main, item);
+    if (item) {
+      document.title = `${item.title} | ${APP_NAME}`;
+      return VIEWS[item.kind](main, item);
+    }
   }
   renderHome(main);
 }

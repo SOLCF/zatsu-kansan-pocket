@@ -1,6 +1,6 @@
 // 住まいの換算項目（エアコン・壁紙/塗料・部屋面積）。根拠は各コメントを参照（2026-10 時点でWeb確認）。
 import { baseCompute, isNum } from '../../calc.js';
-import { approx, approxRange } from '../../format.js';
+import { approx, approxRange, fmtNum } from '../../format.js';
 
 // ---- エアコン ----
 // 冷房の適用畳数（カタログ表記）。「6〜9畳」は範囲ではなく「木造なら6畳・鉄筋なら9畳まで」の意味。
@@ -74,7 +74,7 @@ export const aircon = {
     if (isNum(v.tatami)) {
       const w = kwForTatami(v.tatami, 'wood');
       const r = kwForTatami(v.tatami, 'rc');
-      lines.push(w === null || r === null ? '表の範囲（〜木造20畳／鉄筋30畳）の外です' : `${v.tatami}畳なら 木造は ${w}kW以上、鉄筋は ${r}kW以上が目安`);
+      lines.push(w === null || r === null ? '表の範囲（〜木造20畳／鉄筋30畳）の外です' : `${fmtNum(v.tatami)}畳なら 木造は ${w}kW以上、鉄筋は ${r}kW以上が目安`);
     }
     if (lines.length) lines.push('あくまで目安です。日当たり・断熱・天井高・階数で変わります。暖房の畳数は冷房より狭く表示されるのが一般的です。');
     return lines;

@@ -1,6 +1,6 @@
 // 同一オリジンのみ扱う。外部通信はしない。
 // キャッシュ優先で即表示し、裏で更新（stale-while-revalidate）。構成を変えたら CACHE を上げる。
-const CACHE = 'zkp-v11';
+const CACHE = 'zkp-v12';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/app.js', 'js/dom.js', 'js/calc.js', 'js/format.js', 'js/storage.js',
@@ -27,13 +27,13 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const hit = await cache.match(e.request, { ignoreSearch: true });
-      const net = fetch(e.request, { cache: 'no-cache' })
-        .then((res) => {
-          if (res.ok) cache.put(e.request, res.clone());
-          return res;
-        })
-        .catch(() => hit ?? cache.match('index.html'));
-      return hit ?? net;
+      const update = fetch(e.request, { cache: 'no-cache' }).then(async (res) => {
+        if (res.ok) await cache.put(e.request, res.clone());
+        return res;
+      });
+      // 画面を返したあとも、裏の更新が終わるまで Service Worker を止めさせない
+      e.waitUntil(update.catch(() => {}));
+      return hit ?? update.catch(() => cache.match('index.html'));
     }),
   );
 });

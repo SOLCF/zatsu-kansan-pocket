@@ -2,6 +2,7 @@
 import { h, fill } from '../dom.js';
 import { MY_VALUE_DEFS } from '../data/myvalues.js';
 import { getMyValues, setMyValue, resetMyValues } from '../storage.js';
+import { parseNumber } from '../calc.js';
 
 export function renderSettings(root) {
   const draw = () => {
@@ -30,7 +31,7 @@ export function renderSettings(root) {
                 inputmode: 'decimal',
                 value: String(my[d.key]),
                 onchange: (e) => {
-                  const v = Number(e.target.value.trim());
+                  const v = parseNumber(e.target.value);
                   if (Number.isFinite(v) && v > 0) setMyValue(d.key, v);
                   draw();
                 },

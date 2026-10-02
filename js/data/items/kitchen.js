@@ -85,8 +85,11 @@ export const microwave = {
   assumptions: [{ key: 'homeW', label: '自宅レンジ', unit: 'W', value: 600, myKey: 'rangeW' }],
   compute: (key, value, values, a) => {
     const out = { ...values, [key]: value };
-    if (key === 'homeSec') {
-      out.labelSec = isNum(out.labelW) ? (value * a.homeW) / out.labelW : null;
+    // 自宅の時間から表記の時間を逆算する場合：自宅の時間を入れた場合。または、先に自宅の時間だけ入れてあとから
+    // 表記のW数を入れた場合（表記の時間が空なので、入力済みの自宅の時間を消さずに逆算する）。
+    const fromHome = key === 'homeSec' || (key === 'labelW' && !isNum(out.labelSec) && isNum(out.homeSec));
+    if (fromHome) {
+      out.labelSec = isNum(out.labelW) ? (out.homeSec * a.homeW) / out.labelW : null;
     } else {
       out.homeSec = isNum(out.labelW) && isNum(out.labelSec) ? (out.labelW * out.labelSec) / a.homeW : null;
     }

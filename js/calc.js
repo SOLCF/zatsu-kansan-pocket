@@ -28,6 +28,23 @@ export function baseCompute(fields) {
 
 export const isNum = (x) => Number.isFinite(x);
 
+// 入力欄の文字を数値にする。全角数字・全角記号（日本語キーボード）、桁区切りのカンマ、空白を許す。
+// 数値として読めない文字（空欄を含む）は NaN。「0x10」のような16進などは受け付けない。
+const FULLWIDTH = { '．': '.', '，': ',', '－': '-', '−': '-', '＋': '+' };
+export function parseNumber(s) {
+  const t = String(s)
+    .replace(/[０-９．，－−＋]/g, (c) => FULLWIDTH[c] ?? String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/[,\s]/g, '');
+  return /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(t) ? Number(t) : NaN;
+}
+
+// 計算結果を欄に書き戻すか。欄の文字が「厳密な値」または「表示用に丸めた値」と同じなら、そのまま残す。
+// （ユーザーが入れた 1234 を、別の欄を触ったときに 1230 へ丸めてしまわないため）
+export function shouldWrite(cur, exact, shown) {
+  const c = Number.isFinite(cur) ? cur : null;
+  return c !== shown && c !== exact;
+}
+
 // 目安表示型: 値が入る帯（min以上max未満）を返す。どれにも入らなければ null。
 // 帯の定義: { min, max, label, range, details: [[見出し, 説明]...], ... }（max は最後だけ Infinity）
 export function findBand(bands, v) {
