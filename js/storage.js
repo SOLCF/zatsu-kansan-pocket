@@ -2,7 +2,7 @@
 import { MY_VALUE_DEFS } from './data/myvalues.js';
 import { normalizeTheme } from './theme.js';
 
-const KEYS = { myValues: 'zkp.myValues', favorites: 'zkp.favorites', theme: 'zkp.theme' };
+const KEYS = { myValues: 'zkp.myValues', favorites: 'zkp.favorites', theme: 'zkp.theme', groups: 'zkp.groups' };
 
 function read(key) {
   try {
@@ -65,6 +65,28 @@ export function toggleFavorite(id) {
   const on = !list.includes(id);
   write(KEYS.favorites, JSON.stringify(on ? [...list, id] : list.filter((x) => x !== id)));
   return on;
+}
+
+// ---- ホームのジャンルの開閉（名前 → 開いているか） ----
+// 保存が無いジャンルは fallback（既定は閉じている）。お気に入り欄は呼び出し側が fallback=true で開いた状態から始める。
+
+function readGroups() {
+  const v = readJson(KEYS.groups, {});
+  return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+}
+
+export function getGroupOpen(name, fallback = false) {
+  const v = readGroups()[name];
+  return typeof v === 'boolean' ? v : fallback;
+}
+
+export function setGroupOpen(name, open) {
+  write(KEYS.groups, JSON.stringify({ ...readGroups(), [name]: open }));
+}
+
+// 全ジャンルをまとめて開く／閉じる
+export function setAllGroupsOpen(names, open) {
+  write(KEYS.groups, JSON.stringify({ ...readGroups(), ...Object.fromEntries(names.map((n) => [n, open])) }));
 }
 
 // ---- 画面の色 ----

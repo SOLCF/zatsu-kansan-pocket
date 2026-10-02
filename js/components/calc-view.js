@@ -123,7 +123,7 @@ export function renderCalc(root, item) {
   );
 
   const numInput = (f, label, inputmode) =>
-    h('input', { type: 'text', inputmode, autocomplete: 'off', readonly: !!f.readonly, 'aria-label': label, oninput: () => onInput(f.key) });
+    h('input', { type: 'text', inputmode, autocomplete: 'off', readonly: !!f.readonly, placeholder: f.placeholder, 'aria-label': label, oninput: () => onInput(f.key) });
 
   const rows = item.fields.map((f) => {
     badges[f.key] = h('span', { class: 'approx', hidden: true }, '約');
@@ -151,8 +151,10 @@ export function renderCalc(root, item) {
       ctl[f.key] = { read: () => parseIso(input.value), write: (v) => (input.value = v === null ? '' : toIso(v)) };
       return h('label', { class: 'field' }, label, badges[f.key], input, h('span', { class: 'unit' }, f.unit));
     }
-    const input = numInput(f, f.label, 'decimal');
-    ctl[f.key] = { read: () => parse(input.value), write: (v) => (input.value = v === null ? '' : String(v)) };
+    // 欄ごとに読み取り（f.parse）・表示（f.format）・キーボード（f.inputmode）を変えられる。例：シャッタースピードの「1/250」
+    const input = numInput(f, f.label, f.inputmode ?? 'decimal');
+    const read = f.parse ?? parse;
+    ctl[f.key] = { read: () => read(input.value), write: (v) => (input.value = v === null ? '' : f.format ? f.format(v) : String(v)) };
     return h('label', { class: 'field' }, label, badges[f.key], input, h('span', { class: 'unit' }, f.unit));
   });
 
@@ -162,6 +164,12 @@ export function renderCalc(root, item) {
     const initial = typeof f.default === 'function' ? f.default() : f.default; // 関数なら開いた時点の値（例：今日の日付）
     ctl[f.key].write(initial);
     values[f.key] = initial;
+  }
+  // 初期値だけで結果が出せる項目（露出・星の流れ）は、開いた時点で結果を出す。モデルや場面を変えたときの再計算の基準にもなる。
+  if (item.computeOnLoad) {
+    last = item.fields.filter((f) => f.default !== undefined).at(-1).key;
+    values = item.compute(last, values[last], { ...values }, a);
+    paint();
   }
 
   renderAssumptions();

@@ -3,6 +3,7 @@
 import { TATAMI_SIZES } from './items/housing.js';
 import { MATERIALS, FILAMENT_DIAMETERS } from './items/hobby.js';
 import { MODELS, DEFAULT_MODEL_N } from './items/claude.js';
+import { SENSORS, DEFAULT_SENSOR_N, DEFAULT_MEGAPIXELS } from './items/camera.js';
 
 export const MY_VALUE_DEFS = [
   { key: 'chawanG', label: '茶碗1杯の量（ご飯）', unit: 'g', value: 150, usedBy: '米' },
@@ -16,6 +17,8 @@ export const MY_VALUE_DEFS = [
   { key: 'walkSpeed', label: '歩行速度', unit: 'm/分', value: 80, usedBy: '徒歩' },
   { key: 'filamentDia', label: 'フィラメントの径', unit: 'mm', value: 1.75, usedBy: 'フィラメント', options: FILAMENT_DIAMETERS },
   { key: 'filamentDensity', label: 'フィラメントの素材', unit: '', value: 1.24, usedBy: 'フィラメント', options: MATERIALS },
+  { key: 'cameraSensor', label: 'カメラのセンサーサイズ', unit: '', value: DEFAULT_SENSOR_N, usedBy: '星の流れ', options: SENSORS.map((s) => ({ value: s.n, label: s.label })) },
+  { key: 'cameraMp', label: 'カメラの画素数', unit: '百万画素', value: DEFAULT_MEGAPIXELS, usedBy: '星の流れ' },
   { key: 'claudeModel', label: 'よく使う Claude のモデル', unit: '', value: DEFAULT_MODEL_N, usedBy: 'Claude の4項目', options: MODELS.map((m) => ({ value: m.n, label: m.label })) },
   { key: 'usdJpy', label: '為替レート（1ドル）', unit: '円', value: 158, usedBy: 'Claude の料金（2026-10-01 は約158円）' },
   { key: 'tatamiArea', label: '畳の規格', unit: '㎡/枚', value: 1.824, usedBy: '部屋面積', options: TATAMI_SIZES },

@@ -1,4 +1,4 @@
-// 天気・自然の項目（標高差・風速・降水量・雨水量・体感）。根拠は各コメントを参照（2026-10 時点でWeb確認）。
+// 天気・自然の項目（標高差・風速・降水量・雨水量・体感・雲底高度）。根拠は各コメントを参照（2026-10 時点でWeb確認）。
 import { isNum } from '../../calc.js';
 import { approx, approxRange, fmtNum } from '../../format.js';
 
@@ -268,4 +268,68 @@ export const comfort = {
   note: '不快指数 ＝ 0.81×気温 ＋ 0.01×湿度×(0.99×気温 − 14.3) ＋ 46.3。風は不快指数には入っていません。',
 };
 
-export const natureItems = [elevation, wind, rain, rainwater, comfort];
+// ---- 雲底高度と湿度 ----
+// 積雲（もくもくした雲）の底の高さ（地上からの高さ）は、気温と露点温度の差から 125×(気温−露点) m（Henningの式）。
+//   空気が上昇すると気温は約0.98℃/100m、露点は約0.17℃/100mずつ下がり、その差が縮む割合は約0.8℃/100m。
+//   出典: https://ja.wikipedia.org/wiki/持ち上げ凝結高度
+// 気温と露点から相対湿度への換算はマグヌスの式の近似（A=17.625, B=243.04）。
+// 気温がわからないときは20℃として計算する（気温を0〜30℃で変えても湿度は±数%ほどしか変わらない）。
+export const CLOUD_M_PER_DEG = 125;
+const MAGNUS_A = 17.625;
+const MAGNUS_B = 243.04;
+export const MAX_CLOUD_BASE_M = 6000;
+
+export const rhFromDew = (t, td) => 100 * Math.exp((MAGNUS_A * td) / (MAGNUS_B + td) - (MAGNUS_A * t) / (MAGNUS_B + t));
+export const dewFromRh = (t, rh) => {
+  const g = Math.log(rh / 100) + (MAGNUS_A * t) / (MAGNUS_B + t);
+  return (MAGNUS_B * g) / (MAGNUS_A - g);
+};
+export const rhFromCloudBase = (baseM, t) => rhFromDew(t, t - baseM / CLOUD_M_PER_DEG);
+export const cloudBaseFromRh = (rh, t) => CLOUD_M_PER_DEG * (t - dewFromRh(t, rh));
+
+export const cloudbase = {
+  id: 'cloudbase',
+  genre: '天気・自然',
+  title: '雲底高度と湿度',
+  kind: 'calc',
+  hint: '雲の底の高さ ⇄ 地上の湿度（ざっくり）',
+  anchorMain: true,
+  fields: [
+    { key: 'base', label: '雲底高度（地上からの高さ）', unit: 'm' },
+    { key: 'temp', label: '地上の気温（任意）', unit: '℃', param: true, optional: true, signed: true, blankValue: null },
+    { key: 'rh', label: '地上の湿度', unit: '%' },
+    { key: 'dew', label: '露点温度（気温を入れたとき）', unit: '℃', readonly: true },
+  ],
+  assumptions: [{ key: 'tDefault', label: '気温（未入力のとき）', unit: '℃', value: 20 }],
+  compute: (key, value, values, a) => {
+    const out = { ...values, [key]: value };
+    const t = isNum(out.temp) ? out.temp : a.tDefault;
+    const baseOk = (b) => isNum(b) && b >= 0 && b <= MAX_CLOUD_BASE_M;
+    const rhOk = (r) => isNum(r) && r > 0 && r <= 100;
+    if (key === 'rh') out.base = rhOk(value) ? cloudBaseFromRh(value, t) : null;
+    else if (key === 'base') out.rh = baseOk(value) ? rhFromCloudBase(value, t) : null;
+    else if (baseOk(out.base)) out.rh = rhFromCloudBase(out.base, t); // 気温を変えたら、雲底高度を保って湿度を出し直す
+    else if (rhOk(out.rh)) out.base = cloudBaseFromRh(out.rh, t);
+    out.dew = isNum(out.temp) && baseOk(out.base) ? out.temp - out.base / CLOUD_M_PER_DEG : null;
+    return out;
+  },
+  describe: (v, a) => {
+    if (isNum(v.base) && v.base > MAX_CLOUD_BASE_M) return [`雲底高度は ${MAX_CLOUD_BASE_M}m までで入れてください（積雲の底の高さの目安です）`];
+    if (!isNum(v.base) || !isNum(v.rh)) return [];
+    const lines = [`気温と露点の差（湿数）は 約${fmtNum(v.base / CLOUD_M_PER_DEG, 2)}℃（雲底高度 ÷ 125m）`];
+    if (!isNum(v.temp)) lines.push(`気温は ${a.tDefault}℃として計算しています（気温が違っても湿度は±数%ほど）`);
+    lines.push('積雲（もくもくした雲）の底の高さの目安です。層状の雲や、上空の高い雲には使えません');
+    return lines;
+  },
+  reference: [
+    {
+      title: '雲底高度と湿度の目安（気温20℃）',
+      columns: ['雲底高度', '地上の湿度'],
+      rows: [250, 500, 1000, 1500, 2000, 3000].map((b) => [`${b}m`, `約${fmtNum(rhFromCloudBase(b, 20), 2)}%`]),
+      note: '雲底が低いほど湿度が高く、100%に近づきます。',
+    },
+  ],
+  note: '雲底高度(m) ≒ 125 × (気温 − 露点温度)。地上の湿度が低いほど、雲の底は高くなります。',
+};
+
+export const natureItems = [elevation, wind, rain, rainwater, comfort, cloudbase];
