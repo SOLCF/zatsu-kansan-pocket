@@ -1,6 +1,6 @@
 // 同一オリジンのみ扱う。外部通信はしない。
 // キャッシュ優先で即表示し、裏で更新（stale-while-revalidate）。構成を変えたら CACHE を上げる。
-const CACHE = 'zkp-v2';
+const CACHE = 'zkp-v3';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/app.js', 'js/dom.js', 'js/calc.js', 'js/format.js', 'js/storage.js',
@@ -11,7 +11,8 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // cache: 'reload' で端末のHTTPキャッシュ（Pagesは10分）を経由せず、常に最新を取り込む
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -26,7 +27,7 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const hit = await cache.match(e.request, { ignoreSearch: true });
-      const net = fetch(e.request)
+      const net = fetch(e.request, { cache: 'no-cache' })
         .then((res) => {
           if (res.ok) cache.put(e.request, res.clone());
           return res;
