@@ -72,14 +72,15 @@ export const latlon = {
   computeOnLoad: true,
   fields: [
     { key: 'lat', label: '基準にする緯度（北緯＋・南緯−）', unit: '°', param: true, signed: true, default: 35 },
+    // 縮尺。1:N の地図では地図上1cm＝実際のN cm。実際の距離(km)＝地図上の長さ(cm)×N÷100000。初期値は国土地理院の2万5千分の1地形図
+    { key: 'scale', label: '縮尺（1：○）', unit: '分の1', param: true, integer: true, exact: true, default: 25000 },
+    // 実際の距離は、南北の距離と東西の距離を2辺とする直線（斜辺）の長さ
+    { key: 'realKm', label: '実際の距離（直線）', unit: 'km' },
+    { key: 'mapCm', label: '地図上の長さ', unit: 'cm' },
     { key: 'dLat', label: '緯度の差（南北）', unit: '度' },
     { key: 'ns', label: '南北の距離', unit: 'km' },
     { key: 'dLon', label: '経度の差（東西）', unit: '度' },
     { key: 'ew', label: '東西の距離', unit: 'km' },
-    // 縮尺。1:N の地図では地図上1cm＝実際のN cm。実際の距離(km)＝地図上の長さ(cm)×N÷100000。初期値は国土地理院の2万5千分の1地形図
-    { key: 'scale', label: '縮尺（1：○）', unit: '分の1', param: true, integer: true, exact: true, default: 25000 },
-    { key: 'mapCm', label: '地図上の長さ', unit: 'cm' },
-    { key: 'realKm', label: '実際の距離', unit: 'km' },
   ],
   assumptions: [
     { key: 'kmLat', label: '緯度1度', unit: 'km', value: KM_PER_DEG_LAT },
@@ -87,23 +88,46 @@ export const latlon = {
   ],
   compute: (key, value, values, a) => {
     const out = { ...values, [key]: value };
-    if (key === 'scale' || key === 'mapCm' || key === 'realKm') {
-      const okN = isNum(out.scale) && out.scale > 0;
-      if (key === 'mapCm') out.realKm = okN ? mapCmToKm(value, out.scale) : null;
-      else if (key === 'realKm') out.mapCm = okN ? kmToMapCm(value, out.scale) : null;
-      else if (isNum(out.realKm)) out.mapCm = okN ? kmToMapCm(out.realKm, out.scale) : null; // 縮尺を変えたら、実際の距離を保って地図上の長さを出し直す
-      else if (isNum(out.mapCm)) out.realKm = okN ? mapCmToKm(out.mapCm, out.scale) : null;
-      return out;
-    }
     const okLat = isNum(out.lat) && Math.abs(out.lat) <= 90;
     const kmLon = okLat ? kmPerDegLon(out.lat, a.kmLonEq) : 0;
     const usable = kmLon > 0.01; // 極の近くは経度1度がほぼ0kmで、距離から経度に戻せない
-    if (key === 'dLat') out.ns = value * a.kmLat;
-    else if (key === 'ns') out.dLat = value / a.kmLat;
-    else if (key === 'dLon') out.ew = okLat ? value * kmLon : null;
-    else if (key === 'ew') out.dLon = usable ? value / kmLon : null;
-    else if (isNum(out.dLon)) out.ew = okLat ? out.dLon * kmLon : null; // 緯度を変えたら、経度の差を保ったまま東西の距離を出し直す
-    else if (isNum(out.ew)) out.dLon = usable ? out.ew / kmLon : null;
+    const okN = isNum(out.scale) && out.scale > 0;
+    const setNs = (km) => { out.ns = km; out.dLat = isNum(km) ? km / a.kmLat : null; };
+
+    // 実際の距離（斜辺）から南北の距離を出す。東西の距離が入っていればそれを保ち（斜辺²−東西²の平方根）、なければ真南北とみなす。
+    const distToNs = () => {
+      const ew = isNum(out.ew) ? out.ew : 0;
+      setNs(out.realKm >= ew ? Math.sqrt(out.realKm ** 2 - ew ** 2) : null); // 東西の距離のほうが長いと距離が合わない
+    };
+    // 南北・東西の距離（片方だけでも）から実際の距離（斜辺）を出す
+    const nsEwToDist = () => {
+      if (isNum(out.ns) || isNum(out.ew)) out.realKm = Math.hypot(isNum(out.ns) ? out.ns : 0, isNum(out.ew) ? out.ew : 0);
+    };
+    const distToMap = () => { out.mapCm = isNum(out.realKm) && okN ? kmToMapCm(out.realKm, out.scale) : null; };
+
+    if (key === 'mapCm') {
+      out.realKm = okN ? mapCmToKm(value, out.scale) : null;
+      if (isNum(out.realKm)) distToNs();
+    } else if (key === 'realKm') {
+      distToMap();
+      distToNs();
+    } else if (key === 'scale') {
+      // 縮尺を変えたら、実際の距離を保って地図上の長さを出し直す。実際の距離が空で地図上の長さだけあるときは、そこから出す。
+      if (isNum(out.realKm)) distToMap();
+      else if (isNum(out.mapCm) && okN) {
+        out.realKm = mapCmToKm(out.mapCm, out.scale);
+        distToNs();
+      }
+    } else {
+      if (key === 'dLat') out.ns = value * a.kmLat;
+      else if (key === 'ns') out.dLat = value / a.kmLat;
+      else if (key === 'dLon') out.ew = okLat ? value * kmLon : null;
+      else if (key === 'ew') out.dLon = usable ? value / kmLon : null;
+      else if (isNum(out.dLon)) out.ew = okLat ? out.dLon * kmLon : null; // 緯度を変えたら、経度の差を保ったまま東西の距離を出し直す
+      else if (isNum(out.ew)) out.dLon = usable ? out.ew / kmLon : null;
+      nsEwToDist();
+      distToMap();
+    }
     return out;
   },
   describe: (v, a) => {
@@ -119,7 +143,6 @@ export const latlon = {
       if (isNum(v.ns) && isNum(v.ew)) {
         const d = Math.hypot(v.ns, v.ew);
         lines.push(`南北${approx(v.ns, 'km', 3)}・東西${approx(v.ew, 'km', 3)}離れた2点は、直線で ${approx(d, 'km', 3)}（地球の丸みは無視した近似）`);
-        if (isNum(v.scale) && v.scale > 0) lines.push(`この2点は 縮尺1:${fmtNum(v.scale, 3)} の地図上で ${approx(kmToMapCm(d, v.scale), 'cm', 3)}`);
       }
     }
     if (isNum(v.scale) && v.scale > 0) {
@@ -135,7 +158,7 @@ export const latlon = {
       note: '国土地理院の地形図は2万5千分の1・5万分の1、地勢図は20万分の1が代表的です。都市計画図など2,500分の1の地図もあります。',
     },
   ],
-  note: '緯度1度はどこでもほぼ約111km、経度1度は赤道から離れるほど短くなります。大きな距離や正確な測量には、専用の計算（測地線）が必要です。地図上の長さは、縮尺が1:○のとき 実際の距離 ÷ ○ です（地図の紙の伸び縮みや、地図が図法で歪む分は無視）。',
+  note: '緯度1度はどこでもほぼ約111km、経度1度は赤道から離れるほど短くなります。大きな距離や正確な測量には、専用の計算（測地線）が必要です。地図上の長さは、縮尺が1:○のとき 実際の距離 ÷ ○ です（地図の紙の伸び縮みや、地図が図法で歪む分は無視）。実際の距離は南北と東西の直線（斜辺）で、距離だけを入れたときは東西が空欄なら真南北として緯度の差を出します。東西を先に入れておくと、それを保って南北を出します。',
 };
 
 

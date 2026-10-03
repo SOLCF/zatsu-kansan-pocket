@@ -498,3 +498,38 @@ test('縮尺: 緯度経度の欄を触っても縮尺の欄は壊れない／説
   assert.equal(f.default, 25000);
   assert.equal(latlon.title, '緯度経度と縮尺');
 });
+
+test('縮尺: 実際の距離・地図上の長さ ⇄ 南北・東西・緯度経度が連動', () => {
+  const a = { kmLat: 111.2, kmLonEq: 111.32 };
+  const base = { lat: 35, scale: 25000 };
+  // 実際の距離だけ → 真南北とみなして緯度の差を出す
+  let v = latlon.compute('realKm', 11.12, base, a);
+  near(v.ns, 11.12);
+  near(v.dLat, 0.1, 1e-9);
+  near(v.mapCm, 44.48);
+  assert.equal(v.ew ?? null, null);
+  // 地図上の長さから
+  v = latlon.compute('mapCm', 4, base, a);
+  near(v.realKm, 1);
+  near(v.ns, 1);
+  // 東西が入っていれば保って南北を出す（3-4-5）
+  v = latlon.compute('realKm', 5, { ...base, ew: 3, dLon: 3 / kmPerDegLon(35) }, a);
+  near(v.ns, 4);
+  near(v.ew, 3);
+  assert.equal(latlon.compute('realKm', 2, { ...base, ew: 3 }, a).ns, null); // 東西のほうが長いと合わない
+  // 逆向き：南北・東西 → 実際の距離 → 地図上の長さ
+  v = latlon.compute('ns', 4, { ...base, ew: 3 }, a);
+  near(v.realKm, 5);
+  near(v.mapCm, 20);
+  v = latlon.compute('dLat', 1, base, a); // 南北だけでも実際の距離が出る
+  near(v.realKm, 111.2);
+  v = latlon.compute('dLon', 1, v, a);
+  near(v.realKm, Math.hypot(111.2, 91.19), 0.01);
+  // 緯度を変えると東西の距離が変わり、実際の距離・地図上の長さも出し直す
+  const w = latlon.compute('lat', 60, v, a);
+  near(w.realKm, Math.hypot(111.2, 55.66), 0.01);
+});
+
+test('縮尺: 欄の並び（緯度・縮尺・実際の距離・地図上の長さ・緯度の差・南北・経度の差・東西）', () => {
+  assert.deepEqual(latlon.fields.map((f) => f.key), ['lat', 'scale', 'realKm', 'mapCm', 'dLat', 'ns', 'dLon', 'ew']);
+});
