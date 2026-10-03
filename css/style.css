@@ -59,6 +59,16 @@ main > .field { margin-bottom: 14px; } /* 設定画面など、.fields で包ま
 .field.time .unit { min-width: 0; }
 .field.time:has(.approx:not([hidden])) input { padding-left: 12px; }
 .field.time:has(.approx:not([hidden])) input:nth-of-type(1) { padding-left: 36px; }
+/* 日付欄は 年・月・日 の数字3欄＋カレンダーのボタン。ボタンは他の欄の単位列と同じ幅で、右端が揃う */
+.field.date { position: relative; grid-template-columns: 2fr auto 1fr auto 1fr auto 4em; gap: 2px 4px; }
+.field.date .unit, .field.date input, .field.date .date-btn { grid-row: 2; grid-column: auto; min-width: 0; }
+.field.date input:nth-of-type(1) { grid-column: 1; }
+.field.date input { font-size: 1.15rem; padding-left: 6px; padding-right: 6px; }
+.field.date:has(.approx:not([hidden])) input { padding-left: 6px; }
+.field.date:has(.approx:not([hidden])) input:nth-of-type(1) { padding-left: 36px; }
+.field.date .approx { grid-column: 1; }
+.field.date .date-btn { font: inherit; font-size: 1.3rem; background: var(--card); color: inherit; border: 1px solid var(--line); border-radius: 10px; min-height: 48px; margin-left: 4px; padding: 0; }
+.field.date .date-picker { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 .notes { color: var(--accent); font-weight: 600; }
 .notes p { margin: 8px 0 0; }
 .assumptions { margin-top: 20px; font-size: .85rem; color: var(--sub); }

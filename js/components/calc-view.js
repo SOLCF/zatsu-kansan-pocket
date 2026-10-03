@@ -6,7 +6,7 @@ import { defaultAssumptions, parseNumber as parse, shouldWrite, fractionParts } 
 import { roundSig, fmtNum } from '../format.js';
 import { getMyValues } from '../storage.js';
 import { cardsFor } from './table-view.js';
-import { parseIso, toIso } from '../dates.js';
+import { parseIso, toIso, ymd } from '../dates.js';
 
 export function renderCalc(root, item) {
   const my = getMyValues();
@@ -163,10 +163,50 @@ export function renderCalc(root, item) {
       return h('div', { class: 'field time' }, label, badges[f.key], num, h('span', { class: 'unit' }, '／'), den, h('span', { class: 'unit' }, f.unit));
     }
     if (f.type === 'date') {
-      // 日付欄（カレンダーで選ぶ）。値は「1970-01-01 からの日数」で扱う。
-      const input = h('input', { type: 'date', 'aria-label': f.label, oninput: () => onInput(f.key) });
-      ctl[f.key] = { read: () => parseIso(input.value), write: (v) => (input.value = v === null ? '' : toIso(v)) };
-      return h('label', { class: 'field' }, label, badges[f.key], input, h('span', { class: 'unit' }, f.unit));
+      // 日付欄。年・月・日をキーボード（数字）で入れるか、右のボタンでカレンダーから選ぶ。値は「1970-01-01 からの日数」で扱う。
+      // スマホで日付入力欄そのものにキーボードが出ないことがあるため、数字欄を主にしてカレンダーは補助にする。
+      const yy = numInput(f, `${f.label} 年`, 'numeric');
+      const mm = numInput(f, `${f.label} 月`, 'numeric');
+      const dd = numInput(f, `${f.label} 日`, 'numeric');
+      const picker = h('input', {
+        type: 'date', class: 'date-picker', tabindex: '-1', 'aria-hidden': 'true',
+        oninput: () => {
+          const n = parseIso(picker.value);
+          if (Number.isFinite(n)) {
+            ctl[f.key].write(n);
+            onInput(f.key);
+          }
+        },
+      });
+      const btn = h('button', {
+        class: 'date-btn', type: 'button', 'aria-label': `${f.label}をカレンダーから選ぶ`,
+        onclick: () => {
+          picker.value = Number.isFinite(ctl[f.key].read()) ? toIso(ctl[f.key].read()) : '';
+          if (picker.showPicker) picker.showPicker();
+          else picker.focus();
+        },
+      }, '📅');
+      for (const el of [yy, mm, dd]) el.maxLength = el === yy ? 4 : 2;
+      yy.addEventListener('input', () => yy.value.trim().length >= 4 && mm.focus());
+      mm.addEventListener('input', () => {
+        const t = mm.value.trim();
+        if (t.length >= 2 || (t.length === 1 && Number(t) >= 2)) dd.focus();
+      });
+      ctl[f.key] = {
+        read: () => {
+          const [y, m, d] = [yy.value, mm.value, dd.value].map((s) => s.trim());
+          if (!y && !m && !d) return NaN;
+          if (!/^\d+$/.test(y) || !/^\d+$/.test(m) || !/^\d+$/.test(d) || y.length < 4) return NaN; // 年が4桁になるまでは未入力あつかい
+          return parseIso(`${y.padStart(4, '0')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`);
+        },
+        write: (v) => {
+          const p = v === null ? null : ymd(v);
+          yy.value = p ? String(p.y) : '';
+          mm.value = p ? String(p.m) : '';
+          dd.value = p ? String(p.d) : '';
+        },
+      };
+      return h('div', { class: 'field date' }, label, badges[f.key], yy, h('span', { class: 'unit' }, '年'), mm, h('span', { class: 'unit' }, '月'), dd, h('span', { class: 'unit' }, '日'), btn, picker);
     }
     const input = numInput(f, f.label, 'decimal');
     ctl[f.key] = { read: () => parse(input.value), write: (v) => (input.value = v === null ? '' : String(v)) };
