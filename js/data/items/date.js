@@ -117,13 +117,65 @@ export const datecalc = {
   note: '起点の日付は、最初は今日（端末の日付）です。「何日間」と数えるとき、起点の日を1日目に含めるかは場面で違うので、両端を含めた日数も添えています。',
 };
 
+// ---- 厄年 ----
+// 本厄は数え年で 男性 25・42・61、女性 19・33・37・61（一般に広く言われる目安。大厄は男性42・女性33）。
+// 本厄の前の年が前厄、後の年が後厄。社寺や地域、数え年を元日で数えるか立春で数えるかで扱いが違う。
+export const YAKU = {
+  m: { label: '男性', hon: [25, 42, 61], taiyaku: 42 },
+  f: { label: '女性', hon: [19, 33, 37, 61], taiyaku: 33 },
+};
+
+// 数え年 kazoe の人の厄年判定。{ status:'前厄'|'本厄'|'後厄'|null, hon, next:{ hon, years }|null }
+// next は今の年より先にある次の前厄の始まりまでの年数（今が厄年の最中ならその後の次の厄年）。
+export function yakudoshi(kazoe, sex) {
+  const rule = YAKU[sex];
+  if (!rule || !Number.isInteger(kazoe)) return null;
+  let status = null;
+  let hon = null;
+  for (const h of rule.hon) {
+    if (kazoe === h - 1) [status, hon] = ['前厄', h];
+    else if (kazoe === h) [status, hon] = ['本厄', h];
+    else if (kazoe === h + 1) [status, hon] = ['後厄', h];
+  }
+  const nextHon = rule.hon.find((h) => h - 1 > kazoe);
+  return { status, hon, taiyaku: hon === rule.taiyaku, next: nextHon ? { hon: nextHon, years: nextHon - 1 - kazoe } : null };
+}
+
+export function describeYakudoshi(kazoe, sex, birthYear) {
+  const y = yakudoshi(kazoe, sex);
+  if (!y) return [];
+  const yearOf = (n) => `${birthYear + n - 1}年`;
+  const lines = [];
+  if (y.status) {
+    lines.push(`数え年${kazoe}歳：${y.status}${y.taiyaku && y.status === '本厄' ? '（大厄）' : ''}にあたる目安です（本厄は数え${y.hon}歳＝${yearOf(y.hon)}）`);
+  } else {
+    lines.push(`数え年${kazoe}歳：いまは厄年にあたりません`);
+  }
+  if (y.next) {
+    const when = y.next.years === 1 ? '来年' : `${y.next.years}年後`;
+    lines.push(`次の前厄は${when}（数え${y.next.hon - 1}歳＝${yearOf(y.next.hon - 1)}）、本厄は数え${y.next.hon}歳（${yearOf(y.next.hon)}）`);
+  }
+  return lines;
+}
+
 // ---- 年齢 ----
 export const age = {
   id: 'age',
   genre: '日付',
   title: '年齢',
   kind: 'calc',
-  hint: '生年月日 → 満年齢・数え年・次の誕生日まで',
+  hint: '生年月日 → 満年齢・数え年・次の誕生日まで・厄年',
+  selects: [
+    {
+      key: 'sex',
+      label: '厄年の判定（性別）',
+      default: 'm',
+      options: [
+        { value: 'm', label: '男性', set: { sex: 'm' } },
+        { value: 'f', label: '女性', set: { sex: 'f' } },
+      ],
+    },
+  ],
   fields: [
     { key: 'birth', label: '生年月日', unit: '', type: 'date', signed: true, exact: true },
     { key: 'asOf', label: 'いつ時点か', unit: '', type: 'date', param: true, signed: true, default: today },
@@ -139,16 +191,17 @@ export const age = {
     Object.assign(out, info ? { age: info.age, kazoe: info.kazoe, lived: info.lived, toNext: info.toNext } : { age: null, kazoe: null, lived: null, toNext: null });
     return out;
   },
-  describe: (v) => {
+  describe: (v, a) => {
     if (!isNum(v.birth) || !isNum(v.asOf)) return [];
     if (!isNum(v.age)) return ['「いつ時点か」が生年月日より前になっています'];
     const info = ageInfo(v.birth, v.asOf);
     const b = ymd(v.birth);
     const lines = [`${dateText(v.birth)} 生まれ（${warekiText(v.birth) ?? '明治より前'}・干支 ${eto(b.y)}）`];
     lines.push(info.toNext === 0 ? '今日が誕生日です' : `次の誕生日は ${dateText(info.nextDays)}（あと${info.toNext}日）`);
+    lines.push(...describeYakudoshi(info.kazoe, a.sex, b.y));
     return lines;
   },
-  note: '満年齢は誕生日がくると1つ増えます。数え年は生まれた年を1歳とし、元日ごとに1つ増えます。2月29日生まれは、うるう年でない年は3月1日に年をとるとして数えています。',
+  note: '満年齢は誕生日がくると1つ増えます。数え年は生まれた年を1歳とし、元日ごとに1つ増えます。2月29日生まれは、うるう年でない年は3月1日に年をとるとして数えています。厄年は数え年での目安です（男性25・42・61歳、女性19・33・37・61歳。前後の年が前厄・後厄）。社寺や地域で数え方・年齢が違うことがあります。',
 };
 
 export const dateItems = [wareki, datecalc, age];
