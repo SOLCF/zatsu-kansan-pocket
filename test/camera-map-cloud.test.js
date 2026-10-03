@@ -463,3 +463,38 @@ test('西暦⇄和暦: 初期値は今年（端末の年）で、開いた時点
   assert.equal(v.wareki, year - 2018); // 令和元年 = 2019
   assert.match(wareki.describe(v, { eraName: '令和' })[0], new RegExp(`${year}年 ＝ 令和${year - 2018}年`));
 });
+
+// ---- 縮尺（緯度経度と縮尺） ----
+import { mapCmToKm, kmToMapCm } from '../js/data/items/transport.js';
+
+test('縮尺: 1:25000 の地図上4cm ＝ 実際1km、逆も成り立つ', () => {
+  assert.equal(mapCmToKm(4, 25000), 1);
+  assert.equal(kmToMapCm(1, 25000), 4);
+  const a = {};
+  const v = latlon.compute('mapCm', 4, { scale: 25000 }, a);
+  assert.equal(v.realKm, 1);
+  assert.equal(latlon.compute('realKm', 10, { scale: 50000 }, a).mapCm, 20);
+});
+
+test('縮尺: 縮尺を変えると実際の距離を保って地図上の長さが変わる', () => {
+  const a = {};
+  const v = latlon.compute('scale', 50000, { scale: 25000, realKm: 1, mapCm: 4 }, a);
+  assert.equal(v.mapCm, 2);
+  assert.equal(v.realKm, 1);
+  // 地図上の長さだけある場合は、そこから実際の距離を出す
+  assert.equal(latlon.compute('scale', 50000, { scale: 25000, mapCm: 4 }, a).realKm, 2);
+  // 縮尺が0以下・空なら出さない
+  assert.equal(latlon.compute('mapCm', 4, { scale: 0 }, a).realKm, null);
+});
+
+test('縮尺: 緯度経度の欄を触っても縮尺の欄は壊れない／説明に地図上の長さが出る', () => {
+  const a = { kmLat: 111.2, kmLonEq: 111.32 };
+  let v = latlon.compute('scale', 25000, { lat: 35 }, a);
+  v = latlon.compute('dLat', 1, v, a); // 南北111.2km
+  const text = latlon.describe(v, a).join('\n');
+  assert.match(text, /縮尺1:25,000.*地図上1cm ＝ 実際の約250m/);
+  assert.match(text, /この2点|1km ＝ 地図上約4cm/);
+  const f = latlon.fields.find((x) => x.key === 'scale');
+  assert.equal(f.default, 25000);
+  assert.equal(latlon.title, '緯度経度と縮尺');
+});

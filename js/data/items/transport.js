@@ -46,21 +46,40 @@ export const KM_PER_DEG_LAT = 111.2;
 export const KM_PER_DEG_LON_EQUATOR = 111.32;
 export const NAUTICAL_MILE_KM = 1.852;
 
+// 縮尺 1:N の地図で、地図上の長さ(cm) ⇄ 実際の距離(km)。1km＝100000cm なので 実際(km)＝cm×N÷100000
+export const mapCmToKm = (cm, n) => (cm * n) / 100000;
+export const kmToMapCm = (km, n) => (km * 100000) / n;
+// 代表的な縮尺（参考表用）
+const SCALES = [
+  { n: 2500, label: '1:2,500（都市計画図など）' },
+  { n: 10000, label: '1:10,000' },
+  { n: 25000, label: '1:25,000（地形図）' },
+  { n: 50000, label: '1:50,000（地形図）' },
+  { n: 200000, label: '1:200,000（地勢図）' },
+];
+// メートル数を m か km で「約」付きに書く（1000m以上は km）
+const approxLength = (m) => (m >= 1000 ? approx(m / 1000, 'km', 3) : approx(m, 'm', 3));
+
 // その緯度での経度1度の長さ(km)
 export const kmPerDegLon = (latDeg, eq = KM_PER_DEG_LON_EQUATOR) => eq * Math.cos((latDeg * Math.PI) / 180);
 
 export const latlon = {
   id: 'latlon',
   genre: '移動・地図',
-  title: '緯度経度とkm',
+  title: '緯度経度と縮尺',
   kind: 'calc',
-  hint: '緯度・経度の差（度）⇄ 距離（km）',
+  hint: '緯度・経度の差（度）⇄ 距離（km）、縮尺 ⇄ 地図上の長さ（cm）',
+  computeOnLoad: true,
   fields: [
     { key: 'lat', label: '基準にする緯度（北緯＋・南緯−）', unit: '°', param: true, signed: true, default: 35 },
     { key: 'dLat', label: '緯度の差（南北）', unit: '度' },
     { key: 'ns', label: '南北の距離', unit: 'km' },
     { key: 'dLon', label: '経度の差（東西）', unit: '度' },
     { key: 'ew', label: '東西の距離', unit: 'km' },
+    // 縮尺。1:N の地図では地図上1cm＝実際のN cm。実際の距離(km)＝地図上の長さ(cm)×N÷100000。初期値は国土地理院の2万5千分の1地形図
+    { key: 'scale', label: '縮尺（1：○）', unit: '分の1', param: true, integer: true, exact: true, default: 25000 },
+    { key: 'mapCm', label: '地図上の長さ', unit: 'cm' },
+    { key: 'realKm', label: '実際の距離', unit: 'km' },
   ],
   assumptions: [
     { key: 'kmLat', label: '緯度1度', unit: 'km', value: KM_PER_DEG_LAT },
@@ -68,6 +87,14 @@ export const latlon = {
   ],
   compute: (key, value, values, a) => {
     const out = { ...values, [key]: value };
+    if (key === 'scale' || key === 'mapCm' || key === 'realKm') {
+      const okN = isNum(out.scale) && out.scale > 0;
+      if (key === 'mapCm') out.realKm = okN ? mapCmToKm(value, out.scale) : null;
+      else if (key === 'realKm') out.mapCm = okN ? kmToMapCm(value, out.scale) : null;
+      else if (isNum(out.realKm)) out.mapCm = okN ? kmToMapCm(out.realKm, out.scale) : null; // 縮尺を変えたら、実際の距離を保って地図上の長さを出し直す
+      else if (isNum(out.mapCm)) out.realKm = okN ? mapCmToKm(out.mapCm, out.scale) : null;
+      return out;
+    }
     const okLat = isNum(out.lat) && Math.abs(out.lat) <= 90;
     const kmLon = okLat ? kmPerDegLon(out.lat, a.kmLonEq) : 0;
     const usable = kmLon > 0.01; // 極の近くは経度1度がほぼ0kmで、距離から経度に戻せない
@@ -80,16 +107,35 @@ export const latlon = {
     return out;
   },
   describe: (v, a) => {
-    if (!isNum(v.lat) || Math.abs(v.lat) > 90) return ['緯度は −90〜90度で入れてください'];
-    const kmLon = kmPerDegLon(v.lat, a.kmLonEq);
-    const lines = [
-      `緯度1度 ＝ 約${fmtNum(a.kmLat, 4)}km ／ 経度1度 ＝ 約${fmtNum(kmLon, 3)}km（緯度${fmtNum(v.lat, 3)}度）`,
-      `1分 ＝ 緯度 約${fmtNum(a.kmLat / 60, 3)}km（1海里）・経度 約${fmtNum(kmLon / 60, 3)}km ／ 1秒 ＝ 緯度 約${fmtNum((a.kmLat * 1000) / 3600, 2)}m・経度 約${fmtNum((kmLon * 1000) / 3600, 2)}m`,
-    ];
-    if (isNum(v.ns) && isNum(v.ew)) lines.push(`南北${approx(v.ns, 'km', 3)}・東西${approx(v.ew, 'km', 3)}離れた2点は、直線で ${approx(Math.hypot(v.ns, v.ew), 'km', 3)}（地球の丸みは無視した近似）`);
+    const lines = [];
+    if (!isNum(v.lat) || Math.abs(v.lat) > 90) {
+      lines.push('緯度は −90〜90度で入れてください');
+    } else {
+      const kmLon = kmPerDegLon(v.lat, a.kmLonEq);
+      lines.push(
+        `緯度1度 ＝ 約${fmtNum(a.kmLat, 4)}km ／ 経度1度 ＝ 約${fmtNum(kmLon, 3)}km（緯度${fmtNum(v.lat, 3)}度）`,
+        `1分 ＝ 緯度 約${fmtNum(a.kmLat / 60, 3)}km（1海里）・経度 約${fmtNum(kmLon / 60, 3)}km ／ 1秒 ＝ 緯度 約${fmtNum((a.kmLat * 1000) / 3600, 2)}m・経度 約${fmtNum((kmLon * 1000) / 3600, 2)}m`,
+      );
+      if (isNum(v.ns) && isNum(v.ew)) {
+        const d = Math.hypot(v.ns, v.ew);
+        lines.push(`南北${approx(v.ns, 'km', 3)}・東西${approx(v.ew, 'km', 3)}離れた2点は、直線で ${approx(d, 'km', 3)}（地球の丸みは無視した近似）`);
+        if (isNum(v.scale) && v.scale > 0) lines.push(`この2点は 縮尺1:${fmtNum(v.scale, 3)} の地図上で ${approx(kmToMapCm(d, v.scale), 'cm', 3)}`);
+      }
+    }
+    if (isNum(v.scale) && v.scale > 0) {
+      lines.push(`縮尺1:${fmtNum(v.scale, 3)} は、地図上1cm ＝ 実際の${approxLength(v.scale / 100)}（1km ＝ 地図上${approx(kmToMapCm(1, v.scale), 'cm', 3)}）`);
+    }
     return lines;
   },
-  note: '緯度1度はどこでもほぼ約111km、経度1度は赤道から離れるほど短くなります。大きな距離や正確な測量には、専用の計算（測地線）が必要です。',
+  reference: [
+    {
+      title: '地図の縮尺の目安',
+      columns: ['縮尺', '地図上1cm', '1kmは地図上で'],
+      rows: SCALES.map((s) => [s.label, approxLength(s.n / 100), `${fmtNum(kmToMapCm(1, s.n), 3)}cm`]),
+      note: '国土地理院の地形図は2万5千分の1・5万分の1、地勢図は20万分の1が代表的です。都市計画図など2,500分の1の地図もあります。',
+    },
+  ],
+  note: '緯度1度はどこでもほぼ約111km、経度1度は赤道から離れるほど短くなります。大きな距離や正確な測量には、専用の計算（測地線）が必要です。地図上の長さは、縮尺が1:○のとき 実際の距離 ÷ ○ です（地図の紙の伸び縮みや、地図が図法で歪む分は無視）。',
 };
 
 
