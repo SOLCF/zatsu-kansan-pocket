@@ -530,6 +530,6 @@ test('縮尺: 実際の距離・地図上の長さ ⇄ 南北・東西・緯度�
   near(w.realKm, Math.hypot(111.2, 55.66), 0.01);
 });
 
-test('縮尺: 欄の並び（緯度・縮尺・実際の距離・地図上の長さ・緯度の差・南北・経度の差・東西）', () => {
-  assert.deepEqual(latlon.fields.map((f) => f.key), ['lat', 'scale', 'realKm', 'mapCm', 'dLat', 'ns', 'dLon', 'ew']);
+test('縮尺: 欄の並び（緯度・縮尺・実際の距離・地図上の長さ・南北・緯度の差・東西・経度の差）', () => {
+  assert.deepEqual(latlon.fields.map((f) => f.key), ['lat', 'scale', 'realKm', 'mapCm', 'ns', 'dLat', 'ew', 'dLon']);
 });

@@ -77,10 +77,10 @@ export const latlon = {
     // 実際の距離は、南北の距離と東西の距離を2辺とする直線（斜辺）の長さ
     { key: 'realKm', label: '実際の距離（直線）', unit: 'km' },
     { key: 'mapCm', label: '地図上の長さ', unit: 'cm' },
-    { key: 'dLat', label: '緯度の差（南北）', unit: '度' },
     { key: 'ns', label: '南北の距離', unit: 'km' },
-    { key: 'dLon', label: '経度の差（東西）', unit: '度' },
+    { key: 'dLat', label: '緯度の差（南北）', unit: '度' },
     { key: 'ew', label: '東西の距離', unit: 'km' },
+    { key: 'dLon', label: '経度の差（東西）', unit: '度' },
   ],
   assumptions: [
     { key: 'kmLat', label: '緯度1度', unit: 'km', value: KM_PER_DEG_LAT },
